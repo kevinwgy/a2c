@@ -10,11 +10,10 @@
 #include <time.h>
 #include <mpi.h>
 #include <math.h>
-#include "Vector3D.h"
-#include "input.h"
-#include "output.h"
-#include "minimizer.h"
-#include "hgversion.h"
+#include <Vector3D.h>
+#include <input.h>
+#include <output.h>
+#include <minimizer.h>
 using namespace std;
 
 //--------------------------------------------------------------
@@ -39,7 +38,6 @@ int calculateMacroResults(vector<vector<int> > &PdPd, vector<vector<int> > &PdPd
 void readResults(Input &input, vector<Vec3D> &q_Pd0, vector<Vec3D> &q_H0, vector<double> &sigma_Pd0,
                    vector<double> &sigma_H0, vector<double> &x0, vector<double> &gamma, vector<int> &full_H);
 void gaussianQuadrature(int dim, vector<vector<Vec3D> > &QP);
-void printLogo(MPI_Comm comm);
 //--------------------------------------------------------------
 
 
@@ -59,7 +57,6 @@ int main(int argc, char* argv[])
   MPI_Comm_rank(comm, &MPI_rank);
   MPI_Comm_size(comm, &MPI_size);
   MPI_Barrier(comm);
-  printLogo(comm);
 
   //--------------------------------------------------------------
   // Inputs
@@ -72,7 +69,7 @@ int main(int argc, char* argv[])
 //                   0.1/*sigma_Pd*/, 0.1/*sigma_H*/, 1.0e-6/*dt*/, 1.0e-5/*t_final*/,
 //                   1/*output_frequency*/, "results"/*folder*/, "sol"/*filename_base*/);
 
-  Output output(&comm, &input);
+  Output output(&comm, &input, argc, argv);
 
   //--------------------------------------------------------------
   // Create Shells
@@ -180,7 +177,7 @@ int main(int argc, char* argv[])
   vector<vector<int> > HH;  // H neighbors of H;
   vector<vector<int> > PdPdnum;  // number of Pd neighbors on different shells, for local lattice constant;
   vector<vector<int> > HH1;  // first H neighbor shell of H, for diffusion;
-  int err = 0; //error code
+  [[maybe_unused]] int err = 0; //error code
 
   Minimizer minimizer(&argc, &argv);
 
@@ -208,7 +205,7 @@ if(!MPI_rank) {
   //--------------------------------------------------------------
   int iFrame = 0;
   int iTimeStep = 0;
-  int startTimeStep = 0;
+  [[maybe_unused]] int startTimeStep = 0;
   double t = 0.0; //current simulation time
   double free_entropy = 0.0;
   double &dt = input.file.dt; // by XS
@@ -457,20 +454,5 @@ if(!MPI_rank) {
   return 0;
 }
 
-void printLogo(MPI_Comm comm)
-{
-  int MPI_rank = 0;
-  MPI_Comm_rank(comm, &MPI_rank);
-  if(!MPI_rank) {
-    cout << endl;
-    cout << "  ____                 _ _      _      _    ____   ____ " << endl;
-    cout << " |  _ \\ __ _ _ __ __ _| | | ___| |    / \\  |___ \\ / ___|" << endl;
-    cout << " | |_) / _` | '__/ _` | | |/ _ \\ |   / _ \\   __) | |    " << endl;
-    cout << " |  __/ (_| | | | (_| | | |  __/ |  / ___ \\ / __/| |___ " << endl;
-    cout << " |_|   \\__,_|_|  \\__,_|_|_|\\___|_| /_/   \\_\\_____|\\____|" << endl;
-    cout << endl;
-    cout << " Revision: " << hgRevisionNo << " | " << hgRevisionHash <<endl;
-    cout << endl;
-    cout.flush();
-  }
-}
+
+// -------------------------------------------------------------------------------

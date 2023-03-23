@@ -1,0 +1,25 @@
+    -tao_type <type>    - The algorithm that TAO uses (lmvm, nls, etc.)
+    -tao_fatol <fatol>  - absolute error tolerance in function value
+    -tao_frtol <frtol>  - relative error tolerance in function value
+    -tao_gatol <gatol>  - absolute error tolerance for ||gradient||
+    -tao_grtol <grtol>  - relative error tolerance for ||gradient||
+    -tao_gttol <gttol>  - reduction of ||gradient|| relative to initial gradient
+    -tao_max_it <max>   - sets maximum number of iterations
+    -tao_max_funcs <max>    - sets maximum number of function evaluations
+    -tao_fmin <fmin>    - stop if function value reaches fmin
+    -tao_steptol <tol>  - stop if trust region radius less than <tol>
+    -tao_trust0 <t>     - initial trust region radius
+    -tao_monitor    - prints function value and residual at each iteration
+    -tao_smonitor   - same as tao_monitor, but truncates very small values
+    -tao_cmonitor   - prints function value, residual, and constraint norm at each iteration
+    -tao_view_solution  - prints solution vector at each iteration
+    -tao_view_separableobjective    - prints separable objective vector at each iteration
+    -tao_view_step  - prints step direction vector at each iteration
+    -tao_view_gradient  - prints gradient vector at each iteration
+    -tao_draw_solution  - graphically view solution vector at each iteration
+    -tao_draw_step  - graphically view step vector at each iteration
+    -tao_draw_gradient  - graphically view gradient at each iteration
+    -tao_fd_gradient    - use gradient computed with finite differences
+    -tao_cancelmonitors     - cancels all monitors (except those set with command line)
+    -tao_view   - prints information about the Tao after solving
+    -tao_converged_reason   - prints the reason TAO stopped iterating
