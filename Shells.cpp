@@ -4,7 +4,33 @@
 #include <math.h>
 using namespace std;
 
-void generateShells(int NC, vector<vector<Int3> > *shells)
+//-------------------------------------------------------------------------
+
+Shells::Shells(IoData &iod_)
+      : iod(iod_)
+{
+
+}
+
+//-------------------------------------------------------------------------
+
+Shells::~Shells()
+{ }
+
+//-------------------------------------------------------------------------
+
+void
+Shells::GenerateShells(vector<vector<Int3> > &SS1, vector<vector<Int3> >& SS2)
+{
+
+
+
+}
+
+//-------------------------------------------------------------------------
+
+void
+Shells::GenerateLatticeShellsHCP(int NC, vector<vector<Int3> > *shells)
 {
   int p = 1; //step size
 
@@ -33,7 +59,10 @@ void generateShells(int NC, vector<vector<Int3> > *shells)
   }
 }
 
-void generateInterstitialShells(int NC, vector<vector<Int3> > *shells)
+//-------------------------------------------------------------------------
+
+void
+Shells::GenerateInterstitialShellsHCP(int NC, vector<vector<Int3> > *shells)
 {
   int p = 1; //step size
 

@@ -1,12 +1,40 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <iostream>
-#include <input.h>
+#include <IoData.h>
 #include <parser/Assigner.h>
 #include <parser/Dictionary.h>
 
-InputFileData::InputFileData() : foldername("results/"), filename_base("sol")
+//---------------------------------------------------------
+
+SpaceData::SpaceData() 
 {
+  lattice_type = FCC;
+  sample_shape = cube;
+  N = 6;
+  size = -1.0;
+  lattice_parameter = 3.8;
+  sigma_0 = 1000.0;
+  sigma_1 = 1000.0;
+}
+
+//---------------------------------------------------------
+
+void SpaceData::setup(const char *name)
+{
+ 
+  ClassAssigner *ca = new ClassAssigner(name, 24, 0);
+
+  new ClassToken<MeshData>(ca, "LatticeType", this,
+                               reinterpret_cast<int SpaceData::*>(&SpaceData::lattice_type), 8,
+                               "SimpleCubic", 0, "SC", 0, 
+                               "BodyCenteredCubic", 1, "BCC", 1,
+                               "FaceCenteredCubic", 2, "FCC", 2,
+                               "Cylindrical", 2);
+}
+
+//---------------------------------------------------------
+
   // set defaults
   T0 = 300; 
   eps = 1.0e-5; 
@@ -80,19 +108,13 @@ void InputFileData::setup(const char *name)
   new ClassInt<InputFileData> (ca, "HSiteNum", this, &InputFileData::nH_restart); 
 }
 
+//-----------------------------------------------------
 
-/*
-void InputFileData::initialize(double T0_, double eps_, double rc_, int N_, double xe_, double a_Pd_,
-                  double sigma_Pd_, double sigma_H_, double dt_, double t_final_,
-                  int output_frequency_, char* foldername_, char *filename_base_)
+IoData::IoData(int argc, char** argv)
 {
-  T0 = T0_;  eps = eps_;  rc = rc_;  N = N_;  xe = xe_;  a_Pd = a_Pd_;
-  sigma_Pd = sigma_Pd_;  sigma_H = sigma_H_;  dt = dt_;  t_final = t_final_;
-  output_frequency = output_frequency_;
-  sprintf(foldername, "%s", foldername_);
-  sprintf(filename_base, "%s", filename_base_);
+  readCmdLine(argc, argv);
+  readCmdFile();
 }
-*/
 
 //-----------------------------------------------------
 
@@ -105,6 +127,7 @@ void Input::readCmdLine(int argc, char** argv)
   cmdFileName = argv[1];
 }
 
+//-----------------------------------------------------
 
 void Input::readCmdFile()
 {
@@ -128,8 +151,31 @@ void Input::readCmdFile()
   fclose(cmdFilePtr);
 }
 
+//-----------------------------------------------------
 
 void Input::setupCmdFileVariables()
 {
-  file.setup("A2CInputs");
+  potential.setup("InteratomicPotential");
+
+  space.setup("Space");
+
+  diffusion.seutp("Diffusion");
+
+  ts.setup("Time");
+
+  restart.setup("Restart");
+
+  output.setup("Output");
 }
+
+//-----------------------------------------------------
+
+
+//-----------------------------------------------------
+
+
+
+
+
+
+

@@ -1,8 +1,8 @@
 #include <iostream>
 #include <vector>
 #include <math.h>
-#include "Vector3D.h"
-#include "input.h"
+#include <Vector3D.h>
+#include <input.h>
 using namespace std;
 
 void initializeStateVariables(Input &input, vector<vector<Int3> > &SS1, vector<vector<Int3> > &SS2,

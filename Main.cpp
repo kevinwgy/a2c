@@ -10,7 +10,7 @@
 #include <time.h>
 #include <mpi.h>
 #include <math.h>
-#include <Vector3D.h>
+#include <Shells.h>
 #include <input.h>
 #include <output.h>
 #include <minimizer.h>
@@ -77,8 +77,8 @@ int main(int argc, char* argv[])
   int NC = 1.5*input.file.N*input.file.N + 4; //number of shells to be computed. TODO: enough?
   vector<vector<Int3> > SS1; // PdPd
   vector<vector<Int3> > SS2; // PdH
-  generateShells(NC,&SS1);
-  generateInterstitialShells(NC,&SS2);
+  generateShells(NC,&SS1); //TODO: need to be expanded to include FCC
+  generateInterstitialShells(NC,&SS2); //TODO: need to be extended to include FCC
  
 
   if(!MPI_rank) {
@@ -102,6 +102,11 @@ int main(int argc, char* argv[])
   double gammabd;
 
   initializeStateVariables(input, SS1, SS2, q_Pd0, q_H0, sigma_Pd0, sigma_H0, x0, gamma, PdSubsurf, HSubsurf, gammabd, full_H); 
+
+  // write solution to file
+  output.output_solution(iFrame++, iTimeStep, q_Pd0, q_H0, sigma_Pd0, sigma_H0, x0, gamma, full_H);
+  MPI_Barrier(comm);
+  exit(-1);
 
 
   if(!MPI_rank) {
