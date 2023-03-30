@@ -43,9 +43,9 @@ struct SpaceData
 
   double xe; //!< solute molar fraction
 
-  double lattice_parameter; //!< default unit: Ang
+  double lattice_constant; //!< default unit: Ang
 
-  double sigma_0; //!< matrix atom freq. (Any^-2)
+  double sigma_0; //!< matrix atom freq. (Ang^-2)
   double sigma_1; //1< solute atom frequency (Ang^-2)
 
   SpaceData();
@@ -58,6 +58,8 @@ struct SpaceData
 
 struct PotentialData
 {
+
+  const char* filename;
 
   double eps; // tolerance
   double rc;  // cutoff distance (Ang)
@@ -79,8 +81,8 @@ struct DiffusionData
   double Qm; //!< activation energy (eV)
 
   //! adsorption
-  double vad; //!< attempt frequency (s^-1)
-  double Qad; //!< activation energy (eV) 
+//  double vad; //!< attempt frequency (s^-1)
+//  double Qad; //!< activation energy (eV) 
 
   double xUb; //!< upper bound of hydrogen atomic fraction
   double xLb; //!< lower bound of hydrogen atomic fraction
@@ -132,8 +134,8 @@ struct RestartData
   int restart_file_num;
 
   //! number of sites in restart file
-  int matrix_particle_number;
-  int solute_particle_number;
+  int matrix_site_number;
+  int solute_site_number;
 
   RestartData();
   ~RestartData() {}
