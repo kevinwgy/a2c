@@ -1,7 +1,6 @@
+#include <Shells.h>
 #include <iostream>
-#include <vector>
-#include <Vector3D.h>
-#include <math.h>
+#include <cmath>
 using namespace std;
 
 //-------------------------------------------------------------------------

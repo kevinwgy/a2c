@@ -11,7 +11,7 @@
 #include <mpi.h>
 #include <math.h>
 #include <Shells.h>
-#include <input.h>
+#include <IoData.h>
 #include <output.h>
 #include <minimizer.h>
 using namespace std;
