@@ -10,7 +10,8 @@
 SpaceData::SpaceData() 
 {
   lattice_type = FCC;
-  sample_shape = cube;
+  interstice_type = NONE;
+  sample_shape = CUBE;
   N = 6;
   size = -1.0;
   lattice_constant = 3.8;
@@ -24,7 +25,7 @@ SpaceData::SpaceData()
 void SpaceData::setup(const char *name)
 {
  
-  ClassAssigner *ca = new ClassAssigner(name, 8, 0);
+  ClassAssigner *ca = new ClassAssigner(name, 9, 0);
 
   new ClassToken<SpaceData>(ca, "LatticeType", this,
                                reinterpret_cast<int SpaceData::*>(&SpaceData::lattice_type), 8,
@@ -32,6 +33,11 @@ void SpaceData::setup(const char *name)
                                "BodyCenteredCubic", 1, "BCC", 1,
                                "FaceCenteredCubic", 2, "FCC", 2,
                                "HexagonalClosePacked", 3, "HCP", 3);
+
+  new ClassToken<SpaceData>(ca, "IntersticeType", this,
+                               reinterpret_cast<int SpaceData::*>(&SpaceData::interstice_type), 4,
+                               "None", 0, "Octahedral", 1, "Tetrahedral", 2, 
+                               "OctahedralAndTetrahedral", 3);
 
   new ClassToken<SpaceData>(ca, "SampleShape", this,
                                reinterpret_cast<int SpaceData::*>(&SpaceData::sample_shape), 4,

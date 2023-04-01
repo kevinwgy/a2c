@@ -1,7 +1,7 @@
 #include <Shells.h>
 #include <iostream>
 #include <cmath>
-using namespace std;
+using std::vector;
 
 //-------------------------------------------------------------------------
 
@@ -19,10 +19,29 @@ Shells::~Shells()
 //-------------------------------------------------------------------------
 
 void
-Shells::GenerateShells(vector<vector<Int3> > &SS1, vector<vector<Int3> >& SS2)
+Shells::GenerateShells(vector<vector<Int3> > &SS1, vector<vector<Int3> >* SS2,
+                       vector<vector<Int3> >* SS3)
 {
+  int number_of_shells = std::min(1.5*iod.space.N*iod.space.N + 4, 100);
 
-
+  switch (iod.space.lattice_type) {
+    case SpaceData::HCP :
+      GenerateLatticeShellsHCP(number_of_shells, &SS1);
+      if(SS2)
+        GenerateOctahedralIntersticesHCP(number_of_shells, SS2);
+      if(SS3)
+        GenerateTetrahedralIntersticesHCP(number_of_shells, SS3);
+      break;
+    case SpaceData::FCC :
+      GenerateLatticeShellsFCC(number_of_shells, &SS1);
+      if(SS2)
+        GenerateOctahedralIntersticesFCC(number_of_shells, SS2);
+      if(SS3)
+        GenerateTetrahedralIntersticesFCC(number_of_shells, SS3);
+      break;
+    default :
+      
+  }
 
 }
 

@@ -36,6 +36,8 @@ struct SpaceData
 {
   enum LatticeType {SC = 0, BCC = 1, FCC = 2, HCP = 3} lattice_type;
 
+  enum IntersticeType {NONE = 0, OCTAHEDRAL = 1, TETRAHEDRAL = 2, OCTA_AND_TETRA = 3} interstice_type;
+
   enum SampleShape {CUBE = 0, SPHERE = 1, OCTAHEDRON = 2, OTHER = 3} sample_shape;
 
   int N; //!< sample size (NxNxN), can be overriden by "size"
