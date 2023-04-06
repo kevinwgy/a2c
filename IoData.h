@@ -30,28 +30,126 @@ public:
 
 //------------------------------------------------------------------------------
 
+struct PlaneData {
+
+  double cen_x, cen_y, cen_z, nx, ny, nz;
+
+  PlaneData();
+  ~PlaneData() {}
+  Assigner *getAssigner();
+
+};
+
+//------------------------------------------------------------------------------
+
+struct SpheroidData {
+
+  double cen_x, cen_y, cen_z;
+  double axis_x, axis_y, axis_z;
+  double length, diameter;
+
+  SpheroidData();
+  ~SpheroidData() {}
+  Assigner *getAssigner();
+
+};
+
+//------------------------------------------------------------------------------
+
+struct CylinderConeData {
+
+  //! info about the cylinder
+  double cen_x, cen_y, cen_z, nx, ny, nz, r, L;
+  //! info about the cone (connected to the top of the cylinder)
+  double opening_angle_degrees, cone_height;
+
+  CylinderConeData();
+  ~CylinderConeData() {}
+  Assigner *getAssigner();
+
+};
+
+//------------------------------------------------------------------------------
+
+struct CylinderSphereData {
+
+  double cen_x, cen_y, cen_z, nx, ny, nz, r, L;
+
+  enum OnOff {Off = 0, On = 1};
+  OnOff front_cap;
+  OnOff back_cap;
+
+  CylinderSphereData();
+  ~CylinderSphereData() {}
+  Assigner *getAssigner();
+
+};
+
+//------------------------------------------------------------------------------
+
+struct LatticeDomainData
+{
+  ObjectMap<PlaneData>    planeMap;
+  ObjectMap<CylinderConeData> cylinderconeMap;
+  ObjectMap<CylinderSphereData> cylindersphereMap;
+  ObjectMap<SpheroidData> spheroidMap;
+  
+  const char *custom_geometry_specifier;
+
+  LatticeDomainData();
+  ~LatticeDomainData() {}
+  
+  void setup(const char *);
+};
+
+//------------------------------------------------------------------------------
+
+struct LatticeSiteData
+{
+  double la, lb, lc;
+  int group_id;
+
+  LatticeSiteData();
+  ~LatticeSiteData() {}
+
+  Assigner *getAssigner();
+};
+
+//------------------------------------------------------------------------------
+
+struct LatticeData
+{
+  LatticeDomainData dom;
+
+  double ax, ay, az, bx, by, bz, cx, cy, cz; //!< lattice vectors
+  double a0, b0, c0; //!< lattice spacing in a, b, and c
+  double ox, oy, oz; //!< origin of lattice, i.e. the (x,y,z) coords of site (0,0,0)
+   
+  ObjectMap<LatticeSiteData> siteMap;
+  
+  double dmin; //!< min spacing between sites on this lattice and those on other lattices
+};
+
 //------------------------------------------------------------------------------
 
 struct SpaceData
 {
-  enum LatticeType {SC = 0, BCC = 1, FCC = 2, HCP = 3} lattice_type;
 
-  enum IntersticeType {NONE = 0, OCTAHEDRAL = 1, TETRAHEDRAL = 2, OCTA_AND_TETRA = 3} interstice_type;
+  ObjectMap<LatticeData> lattice;
 
-  enum SampleShape {CUBE = 0, SPHERE = 1, OCTAHEDRON = 2, OTHER = 3} sample_shape;
+};
 
-  int N; //!< sample size (NxNxN), can be overriden by "size"
-  double size; //!< size (dimension: length) of the sample. Its specific meaning depends on sample shape
+//------------------------------------------------------------------------------
 
+struct IcData
+{
   double xe; //!< solute molar fraction
-
-  double lattice_constant; //!< default unit: Ang
 
   double sigma_0; //!< matrix atom freq. (Ang^-2)
   double sigma_1; //1< solute atom frequency (Ang^-2)
 
-  SpaceData();
-  ~SpaceData() {}
+  IcData();
+  ~IcData() {}
 
   void setup(const char *);
 };
@@ -154,9 +252,11 @@ class IoData
 
 public:
 
+  ObjectMap<LatticeData> lattice;
+
   PotentialData potential;
 
-  SpaceData space;
+  IcData ic;
 
   DiffusionData diffusion;
 

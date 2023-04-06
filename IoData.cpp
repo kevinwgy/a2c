@@ -1,9 +1,178 @@
-#include <stdlib.h>
-#include <stdio.h>
 #include <iostream>
 #include <IoData.h>
-#include <parser/Assigner.h>
-#include <parser/Dictionary.h>
+
+//---------------------------------------------------------
+
+PlaneData::PlaneData()
+{
+
+  cen_x  = 0.0;
+  cen_y  = 0.0;
+  cen_z  = 0.0;
+  nx     = 0.0;
+  ny     = 0.0;
+  nz     = 0.0;
+
+}
+
+//------------------------------------------------------------------------------
+
+Assigner *PlaneData::getAssigner()
+{
+
+  ClassAssigner *ca = new ClassAssigner("normal", 6, nullAssigner);
+
+  new ClassDouble<PlaneData> (ca, "Point_x", this, &PlaneData::cen_x);
+  new ClassDouble<PlaneData> (ca, "Point_y", this, &PlaneData::cen_y);
+  new ClassDouble<PlaneData> (ca, "Point_z", this, &PlaneData::cen_z);
+  new ClassDouble<PlaneData> (ca, "Normal_x", this, &PlaneData::nx);
+  new ClassDouble<PlaneData> (ca, "Normal_y", this, &PlaneData::ny);
+  new ClassDouble<PlaneData> (ca, "Normal_z", this, &PlaneData::nz);
+
+  return ca;
+}
+
+//---------------------------------------------------------
+
+SpheroidData::SpheroidData()
+{
+
+  cen_x  = 0.0;
+  cen_y  = 0.0;
+  cen_z  = 0.0;
+
+  axis_x = 0.0;
+  axis_y = 0.0;
+  axis_z = 0.0;
+
+  length = 0.0;
+  diameter = 0.0;
+
+}
+
+//------------------------------------------------------------------------------
+
+Assigner *SpheroidData::getAssigner()
+{
+
+  ClassAssigner *ca = new ClassAssigner("normal", 8, nullAssigner);
+
+  new ClassDouble<SpheroidData> (ca, "Center_x", this, &SpheroidData::cen_x);
+  new ClassDouble<SpheroidData> (ca, "Center_y", this, &SpheroidData::cen_y);
+  new ClassDouble<SpheroidData> (ca, "Center_z", this, &SpheroidData::cen_z);
+  new ClassDouble<SpheroidData> (ca, "Axis_x", this, &SpheroidData::axis_x);
+  new ClassDouble<SpheroidData> (ca, "Axis_y", this, &SpheroidData::axis_y);
+  new ClassDouble<SpheroidData> (ca, "Axis_z", this, &SpheroidData::axis_z);
+  new ClassDouble<SpheroidData> (ca, "Length", this, &SpheroidData::length);
+  new ClassDouble<SpheroidData> (ca, "Diameter", this, &SpheroidData::diameter);
+
+  return ca;
+}
+
+//---------------------------------------------------------
+
+CylinderConeData::CylinderConeData() {
+
+  cen_x  = 0.0;
+  cen_y  = 0.0;
+  cen_z  = 0.0;
+  nx     = 0.0;
+  ny     = 0.0;
+  nz     = 1.0;
+
+  r = 1.0;
+  L = 0.0;
+
+  cone_height = 0.0;
+  opening_angle_degrees = 45.0;
+}
+
+//------------------------------------------------------------------------------
+
+Assigner *CylinderConeData::getAssigner()
+{
+  ClassAssigner *ca = new ClassAssigner("normal", 10, nullAssigner);
+
+  new ClassDouble<CylinderConeData> (ca, "Axis_x", this, &CylinderConeData::nx);
+  new ClassDouble<CylinderConeData> (ca, "Axis_y", this, &CylinderConeData::ny);
+  new ClassDouble<CylinderConeData> (ca, "Axis_z", this, &CylinderConeData::nz);
+  new ClassDouble<CylinderConeData> (ca, "BaseCenter_x", this, &CylinderConeData::cen_x);
+  new ClassDouble<CylinderConeData> (ca, "BaseCenter_y", this, &CylinderConeData::cen_y);
+  new ClassDouble<CylinderConeData> (ca, "BaseCenter_z", this, &CylinderConeData::cen_z);
+  new ClassDouble<CylinderConeData> (ca, "CylinderRadius", this, &CylinderConeData::r);
+  new ClassDouble<CylinderConeData> (ca, "CylinderHeight", this, &CylinderConeData::L);
+
+  new ClassDouble<CylinderConeData> (ca, "ConeOpeningAngleInDegrees", this, &CylinderConeData::opening_angle_degrees);
+  new ClassDouble<CylinderConeData> (ca, "ConeHeight", this, &CylinderConeData::cone_height);
+
+  return ca;
+}
+
+//---------------------------------------------------------
+
+CylinderSphereData::CylinderSphereData() {
+
+  cen_x  = 0.0;
+  cen_y  = 0.0;
+  cen_z  = 0.0;
+  nx     = 0.0;
+  ny     = 0.0;
+  nz     = 1.0;
+
+  r = 1.0;
+  L = 0.0;
+
+  front_cap = Off;
+  back_cap = Off;
+
+}
+
+//------------------------------------------------------------------------------
+
+Assigner *CylinderSphereData::getAssigner()
+{
+  ClassAssigner *ca = new ClassAssigner("normal", 10, nullAssigner);
+
+  new ClassDouble<CylinderSphereData> (ca, "Axis_x", this, &CylinderSphereData::nx);
+  new ClassDouble<CylinderSphereData> (ca, "Axis_y", this, &CylinderSphereData::ny);
+  new ClassDouble<CylinderSphereData> (ca, "Axis_z", this, &CylinderSphereData::nz);
+  new ClassDouble<CylinderSphereData> (ca, "CylinderCenter_x", this, &CylinderSphereData::cen_x);
+  new ClassDouble<CylinderSphereData> (ca, "CylinderCenter_y", this, &CylinderSphereData::cen_y);
+  new ClassDouble<CylinderSphereData> (ca, "CylinderCenter_z", this, &CylinderSphereData::cen_z);
+  new ClassDouble<CylinderSphereData> (ca, "CylinderRadius", this, &CylinderSphereData::r);
+  new ClassDouble<CylinderSphereData> (ca, "CylinderHeight", this, &CylinderSphereData::L);
+  new ClassToken<CylinderSphereData> (ca, "FrontSphericalCap", this,
+     reinterpret_cast<int CylinderSphereData::*>(&CylinderSphereData::front_cap), 2,
+     "Off", 0, "On", 1);
+  new ClassToken<CylinderSphereData> (ca, "BackSphericalCap", this,
+     reinterpret_cast<int CylinderSphereData::*>(&CylinderSphereData::back_cap), 2,
+     "Off", 0, "On", 1);
+
+  return ca;
+}
+
+//---------------------------------------------------------
+
+LatticeDomainData::LatticeDomainData()
+{
+  custom_geometry_specifier = "";
+}
+
+//---------------------------------------------------------
+
+void LatticeDomainData::setup(const char *name)
+{
+ 
+  ClassAssigner *ca = new ClassAssigner(name, 5, 0);
+
+  planeMap.setup("Plane", ca);
+  spheroidMap.setup("Spheroid", ca);
+  cylinderconeMap.setup("CylinderAndCone", ca);
+  cylindersphereMap.setup("CylinderWithSphericalCaps", ca);
+
+  new ClassStr<LatticeDomainData> (ca, "GeometrySpecifier", this, &LatticeDomainData::custom_geometry_specifier);
+
+}
 
 //---------------------------------------------------------
 
@@ -14,7 +183,13 @@ SpaceData::SpaceData()
   sample_shape = CUBE;
   N = 6;
   size = -1.0;
-  lattice_constant = 3.8;
+  a = -1.0;
+  b = -1.0;
+  c = -1.0; 
+  alpha = 90.0;
+  beta  = 90.0;
+  gamma = 90.0;
+  
   xe = 0.0; 
   sigma_0 = 1000.0;
   sigma_1 = 1000.0;
@@ -25,23 +200,24 @@ SpaceData::SpaceData()
 void SpaceData::setup(const char *name)
 {
  
-  ClassAssigner *ca = new ClassAssigner(name, 9, 0);
+  ClassAssigner *ca = new ClassAssigner(name, 15, 0);
 
   new ClassToken<SpaceData>(ca, "LatticeType", this,
-                               reinterpret_cast<int SpaceData::*>(&SpaceData::lattice_type), 8,
+                               reinterpret_cast<int SpaceData::*>(&SpaceData::lattice_type), 9,
                                "SimpleCubic", 0, "SC", 0, 
                                "BodyCenteredCubic", 1, "BCC", 1,
                                "FaceCenteredCubic", 2, "FCC", 2,
-                               "HexagonalClosePacked", 3, "HCP", 3);
+                               "HexagonalClosePacked", 3, "HCP", 3,
+                               "Custom", 4);
 
   new ClassToken<SpaceData>(ca, "IntersticeType", this,
-                               reinterpret_cast<int SpaceData::*>(&SpaceData::interstice_type), 4,
-                               "None", 0, "Octahedral", 1, "Tetrahedral", 2, 
-                               "OctahedralAndTetrahedral", 3);
+                               reinterpret_cast<int SpaceData::*>(&SpaceData::interstice_type), 5,
+                               "None", 0, "Central", 1, "Octahedral", 2, "Tetrahedral", 3, 
+                               "OctahedralAndTetrahedral", 4);
 
   new ClassToken<SpaceData>(ca, "SampleShape", this,
                                reinterpret_cast<int SpaceData::*>(&SpaceData::sample_shape), 4,
-                               "Cube", 0, "Sphere", 1, "Octahedron", 2, "Other", 3);
+                               "Cube", 0, "Sphere", 1, "Octahedron", 2, "Custom", 3);
 
   new ClassInt<SpaceData>(ca, "NumberOfUnitCells", this, &SpaceData::N);
 
@@ -49,7 +225,19 @@ void SpaceData::setup(const char *name)
 
   new ClassDouble<SpaceData> (ca, "SoluteMolarFraction", this, &SpaceData::xe);
 
-  new ClassDouble<SpaceData> (ca, "LatticeConstant", this, &SpaceData::lattice_constant);
+  new ClassDouble<SpaceData> (ca, "LatticeConstant", this, &SpaceData::a);
+
+  new ClassDouble<SpaceData> (ca, "LatticeConstant1", this, &SpaceData::a);
+
+  new ClassDouble<SpaceData> (ca, "LatticeConstant2", this, &SpaceData::b);
+
+  new ClassDouble<SpaceData> (ca, "LatticeConstant3", this, &SpaceData::c);
+
+  new ClassDouble<SpaceData> (ca, "LatticeAngle23", this, &SpaceData::alpha);
+
+  new ClassDouble<SpaceData> (ca, "LatticeAngle13", this, &SpaceData::beta);
+
+  new ClassDouble<SpaceData> (ca, "LatticeAngle12", this, &SpaceData::gamma);
 
   new ClassDouble<SpaceData> (ca, "Sigma0", this, &SpaceData::sigma_0);
 

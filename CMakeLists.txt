@@ -49,6 +49,7 @@ ADD_CUSTOM_COMMAND(
 
 # add include and link directories 
 include_directories("${CMAKE_SOURCE_DIR}")
+include_directories(${CMAKE_SOURCE_DIR}/GeoTools)
 link_directories(${CMAKE_SOURCE_DIR}/parser)
 
 # compile the parser
@@ -60,12 +61,14 @@ add_custom_target(
 
 # add the executable
 add_executable(dmd
-main.cpp
+Main.cpp
+IoData.cpp
+Shells.cpp
+Utils.cpp
 boundaryconditions.cpp
 calculateresults.cpp
 electrondensity.cpp
 initialize.cpp
-input.cpp
 integrate.cpp
 minimizer.cpp
 neighbors.cpp
@@ -73,7 +76,8 @@ output.cpp
 potential.cpp
 quadrature.cpp
 readresults.cpp
-shells.cpp)
+GeoTools/GeoTools.cpp
+)
 
 
 # link to libraries

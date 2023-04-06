@@ -1,25 +1,63 @@
-#include <Shells.h>
+#include <Lattice.h>
+#include <Utils.h>
 #include <iostream>
 #include <cmath>
 using std::vector;
 
 //-------------------------------------------------------------------------
 
-Shells::Shells(IoData &iod_)
-      : iod(iod_)
+Lattice::Lattice(IoData &iod_)
+      : iod(iod_), lattice_type(iod_.space.lattice_type)
 {
 
+  double PI = 2.0*acos(0.0);
+
+  if(iod.space.lattice_constant_1<=0.0) {
+    print_error("*** Error: Need at least one positive lattice constant.\n");
+    exit_mpi();
+  }
+
+  // Get Lattice constants and vectors
+  switch (lattice_type) {
+    case SpaceData::SC
+
+ I AM HERE!!!
+
+  };
+
+
+  // Create Shells
+  switch (iod.space.lattice_type) {
+    case SpaceData::HCP :
+      GenerateLatticeShellsHCP(number_of_shells, &SS1);
+      if(SS2)
+        GenerateOctahedralIntersticesHCP(number_of_shells, SS2);
+      if(SS3)
+        GenerateTetrahedralIntersticesHCP(number_of_shells, SS3);
+      break;
+    case SpaceData::FCC :
+      GenerateLatticeShellsFCC(number_of_shells, &SS1);
+      if(SS2)
+        GenerateOctahedralIntersticesFCC(number_of_shells, SS2);
+      if(SS3)
+        GenerateTetrahedralIntersticesFCC(number_of_shells, SS3);
+      break;
+    default :
+      print_error("*** Error: Cannot create shells for the specified lattice type.\n");      
+      exit_mpi();
+  }
+}
 }
 
 //-------------------------------------------------------------------------
 
-Shells::~Shells()
+Lattice::~Lattice()
 { }
 
 //-------------------------------------------------------------------------
 
 void
-Shells::GenerateShells(vector<vector<Int3> > &SS1, vector<vector<Int3> >* SS2,
+Lattice::GenerateShells(vector<vector<Int3> > &SS1, vector<vector<Int3> >* SS2,
                        vector<vector<Int3> >* SS3)
 {
   int number_of_shells = std::min(1.5*iod.space.N*iod.space.N + 4, 100);
@@ -40,24 +78,25 @@ Shells::GenerateShells(vector<vector<Int3> > &SS1, vector<vector<Int3> >* SS2,
         GenerateTetrahedralIntersticesFCC(number_of_shells, SS3);
       break;
     default :
-      
+      print_error("*** Error: Cannot create shells for the specified lattice type.\n");      
+      exit_mpi();
   }
-
 }
 
 //-------------------------------------------------------------------------
 
 void
-Shells::GenerateLatticeShellsHCP(int NC, vector<vector<Int3> > *shells)
+Lattice::GenerateLatticeShellsHCP(int NC, vector<vector<Int3> > *shells)
 {
+
+  assert(shells && shells->empty());
+  assert(NC>=0);
+
   int p = 1; //step size
 
-  if(!shells->empty()) {
-    cerr << "WARNING: shells not empty!" << endl;
-    shells->clear();
-  }
   for(int iShell=0; iShell<NC; iShell++) {
-    vector<Int3> shell;
+    shells->push_back(); //start a new shell
+    vector<Int3>& shell(shells->back());
     while(shell.empty()) { //find the iShell
       int lmax = (int)floor(sqrt((double)p));
       for (int l1=-lmax; l1<=lmax; l1++) 
@@ -68,7 +107,6 @@ Shells::GenerateLatticeShellsHCP(int NC, vector<vector<Int3> > *shells)
       if(shell.empty())
         p++;
     }
-    shells->push_back(shell);
     p++;
   }
   if((int)shells->size()!=NC) {
@@ -80,7 +118,7 @@ Shells::GenerateLatticeShellsHCP(int NC, vector<vector<Int3> > *shells)
 //-------------------------------------------------------------------------
 
 void
-Shells::GenerateInterstitialShellsHCP(int NC, vector<vector<Int3> > *shells)
+Lattice::GenerateOctahedralIntersticesHCP(int NC, vector<vector<Int3> > *shells)
 {
   int p = 1; //step size
 
