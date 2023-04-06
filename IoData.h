@@ -30,12 +30,63 @@ public:
 
 //------------------------------------------------------------------------------
 
+struct StateVariable {
+  //not used at the moment
+  StateVariable() {}
+  ~StateVariable() {}
+  void setup(const char *, ClassAssigner * = 0) {}
+};
+
+//------------------------------------------------------------------------------
+
 struct PlaneData {
 
   double cen_x, cen_y, cen_z, nx, ny, nz;
 
+  enum Inclusion {OVERRIDE = 0, INTERSECTION = 1, UNION = 2} inclusion;
+
+  StateVariable initialConditions;
+
   PlaneData();
   ~PlaneData() {}
+  Assigner *getAssigner();
+
+};
+
+//------------------------------------------------------------------------------
+
+struct ParallelepipedData {
+
+  double x0, y0, z0; //!< point 1
+
+  double ax, ay, az; //!< axis 1 and its length
+  double bx, by, bz; //!< axis 2 and its length
+  double cx, cy, cz; //!< axis 3 and its length
+
+  enum InteriorOrExterior {INTERIOR = 0, EXTERIOR = 1} side;
+  enum Inclusion {OVERRIDE = 0, INTERSECTION = 1, UNION = 2} inclusion;
+
+  StateVariable initialConditions;
+
+  ParallelepipedData();
+  ~ParallelepipedData() {}
+  Assigner *getAssigner();
+
+};
+
+//------------------------------------------------------------------------------
+
+struct SphereData {
+
+  double cen_x, cen_y, cen_z, radius;
+
+  enum InteriorOrExterior {INTERIOR = 0, EXTERIOR = 1} side;
+  enum Inclusion {OVERRIDE = 0, INTERSECTION = 1, UNION = 2} inclusion;
+
+  StateVariable initialConditions;
+
+  SphereData();
+  ~SphereData() {}
   Assigner *getAssigner();
 
 };
@@ -47,6 +98,11 @@ struct SpheroidData {
   double cen_x, cen_y, cen_z;
   double axis_x, axis_y, axis_z;
   double length, diameter;
+
+  enum InteriorOrExterior {INTERIOR = 0, EXTERIOR = 1} side;
+  enum Inclusion {OVERRIDE = 0, INTERSECTION = 1, UNION = 2} inclusion;
+
+  StateVariable initialConditions;
 
   SpheroidData();
   ~SpheroidData() {}
@@ -62,6 +118,11 @@ struct CylinderConeData {
   double cen_x, cen_y, cen_z, nx, ny, nz, r, L;
   //! info about the cone (connected to the top of the cylinder)
   double opening_angle_degrees, cone_height;
+
+  enum InteriorOrExterior {INTERIOR = 0, EXTERIOR = 1} side;
+  enum Inclusion {OVERRIDE = 0, INTERSECTION = 1, UNION = 2} inclusion;
+
+  StateVariable initialConditions;
 
   CylinderConeData();
   ~CylinderConeData() {}
@@ -79,27 +140,15 @@ struct CylinderSphereData {
   OnOff front_cap;
   OnOff back_cap;
 
+  enum InteriorOrExterior {INTERIOR = 0, EXTERIOR = 1} side;
+  enum Inclusion {OVERRIDE = 0, INTERSECTION = 1, UNION = 2} inclusion;
+
+  StateVariable initialConditions;
+
   CylinderSphereData();
   ~CylinderSphereData() {}
   Assigner *getAssigner();
 
-};
-
-//------------------------------------------------------------------------------
-
-struct LatticeDomainData
-{
-  ObjectMap<PlaneData>    planeMap;
-  ObjectMap<CylinderConeData> cylinderconeMap;
-  ObjectMap<CylinderSphereData> cylindersphereMap;
-  ObjectMap<SpheroidData> spheroidMap;
-  
-  const char *custom_geometry_specifier;
-
-  LatticeDomainData();
-  ~LatticeDomainData() {}
-  
-  void setup(const char *);
 };
 
 //------------------------------------------------------------------------------
@@ -119,24 +168,22 @@ struct LatticeSiteData
 
 struct LatticeData
 {
-  LatticeDomainData dom;
+
+  //! Lattice domain
+  ObjectMap<PlaneData>          planeMap;
+  ObjectMap<CylinderConeData>   cylinderconeMap;
+  ObjectMap<CylinderSphereData> cylindersphereMap;
+  ObjectMap<SphereData>         sphereMap;
+  ObjectMap<ParallelepipedData> parallelepipedMap;
+  ObjectMap<SpheroidData>       spheroidMap;
+  const char *custom_geometry_specifier;
 
   double ax, ay, az, bx, by, bz, cx, cy, cz; //!< lattice vectors
-  double a0, b0, c0; //!< lattice spacing in a, b, and c
   double ox, oy, oz; //!< origin of lattice, i.e. the (x,y,z) coords of site (0,0,0)
    
   ObjectMap<LatticeSiteData> siteMap;
   
   double dmin; //!< min spacing between sites on this lattice and those on other lattices
-};
-
-//------------------------------------------------------------------------------
-
-struct SpaceData
-{
-
-  ObjectMap<LatticeData> lattice;
-
 };
 
 //------------------------------------------------------------------------------
@@ -252,7 +299,7 @@ class IoData
 
 public:
 
-  ObjectMap<LatticeData> lattice;
+  ObjectMap<LatticeData> latticeMap;
 
   PotentialData potential;
 
