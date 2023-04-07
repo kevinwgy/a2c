@@ -452,9 +452,10 @@ void TsData::setup(const char *name)
 
 OutputData::OutputData()
 {
-  foldername = "";
+  prefix = "";
   filename_base = "";
   frequency = 100;
+  verbose = LOW;
 }
 
 //---------------------------------------------------------
@@ -462,14 +463,17 @@ OutputData::OutputData()
 void OutputData::setup(const char *name)
 {
 
-  ClassAssigner *ca = new ClassAssigner(name, 3, 0);
+  ClassAssigner *ca = new ClassAssigner(name, 4, 0);
 
-  new ClassStr<OutputData> (ca, "Path", this, &OutputData::foldername);
+  new ClassStr<OutputData> (ca, "Prefix", this, &OutputData::prefix);
 
-  new ClassStr<OutputData> (ca, "FilePrefix", this, &OutputData::filename_base);
+  new ClassStr<OutputData> (ca, "Solution", this, &OutputData::filename_base);
 
   new ClassInt<OutputData> (ca, "Frequency", this, &OutputData::frequency);
 
+  new ClassToken<OutputData>(ca, "VerboseScreenOutput", this,
+                               reinterpret_cast<int OutputData::*>(&OutputData::verbose), 3,
+                               "Low", 0, "Medium", 1, "High", 2);
 }
 
 //---------------------------------------------------------

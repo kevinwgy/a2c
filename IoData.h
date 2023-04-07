@@ -262,8 +262,10 @@ struct TsData
 struct OutputData
 {
 
-  const char* foldername;
+  const char* prefix;
   const char* filename_base;
+
+  enum VerbosityLevel {LOW = 0, MEDIUM = 1, HIGH = 2} verbose;
 
   int frequency;
 

@@ -14,11 +14,12 @@
 #include <IoData.h>
 #include <output.h>
 #include <minimizer.h>
-using namespace std;
+#include <Utils.h>
+
+int verbose;
+MPI_Comm dmd_comm;
 
 //--------------------------------------------------------------
-void generateShells(int NC, vector<vector<Int3> > *shells);
-void generateInterstitialShells(int NC, vector<vector<Int3> > *shells);
 void initializeStateVariables(Input &input, vector<vector<Int3> > &SS1, vector<vector<Int3> > &SS2, 
                               vector<Vec3D> &q_Pd0, vector<Vec3D> &q_H0, vector<double> &sigma_Pd0, 
                               vector<double> &sigma_H0, vector<double> &x0, vector<double> &gamma, 
@@ -53,6 +54,9 @@ int main(int argc, char* argv[])
   MPI_Init(&argc, &argv);
   MPI_Comm comm;
   comm = MPI_COMM_WORLD;
+  dmd_comm = MPI_COMM_WORLD; //Different if DMD is coupled w/ something else
+  printHeader(argc, argv);
+
   int MPI_rank, MPI_size;
   MPI_Comm_rank(comm, &MPI_rank);
   MPI_Comm_size(comm, &MPI_size);
@@ -61,13 +65,8 @@ int main(int argc, char* argv[])
   //--------------------------------------------------------------
   // Inputs
   //--------------------------------------------------------------
-  Input input;
-  input.readCmdLine(argc, argv);
-  input.readCmdFile();
-
-//  input.initialize(300.0/*T0*/, 1.0e-5/*eps*/, 5.35/*rc*/, 6/*N*/, 0.3/*xe*/, 4.3/*a_Pd*/,
-//                   0.1/*sigma_Pd*/, 0.1/*sigma_H*/, 1.0e-6/*dt*/, 1.0e-5/*t_final*/,
-//                   1/*output_frequency*/, "results"/*folder*/, "sol"/*filename_base*/);
+  IoData iod(argc, argv);
+  verbose = iod.output.verbose;
 
   Output output(&comm, &input, argc, argv);
 
