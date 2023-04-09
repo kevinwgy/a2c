@@ -17,7 +17,8 @@
 #include <Utils.h>
 
 int verbose;
-MPI_Comm dmd_comm;
+clock_t start_time;
+MPI_Comm intra_comm;
 
 //--------------------------------------------------------------
 void initializeStateVariables(Input &input, vector<vector<Int3> > &SS1, vector<vector<Int3> > &SS2, 
@@ -47,20 +48,14 @@ void gaussianQuadrature(int dim, vector<vector<Vec3D> > &QP);
 //--------------------------------------------------------------
 int main(int argc, char* argv[])
 {
-  clock_t start_time = clock(); //for timing purpose only
+  start_time = clock(); //for timing purpose only
   //--------------------------------------------------------------
   // Setup MPI 
   //--------------------------------------------------------------
   MPI_Init(&argc, &argv);
-  MPI_Comm comm;
-  comm = MPI_COMM_WORLD;
-  dmd_comm = MPI_COMM_WORLD; //Different if DMD is coupled w/ something else
+  MPI_Comm comm = MPI_COMM_WORLD;
+  intra_comm = MPI_COMM_WORLD; //Different if DMD is coupled w/ something else
   printHeader(argc, argv);
-
-  int MPI_rank, MPI_size;
-  MPI_Comm_rank(comm, &MPI_rank);
-  MPI_Comm_size(comm, &MPI_size);
-  MPI_Barrier(comm);
 
   //--------------------------------------------------------------
   // Inputs

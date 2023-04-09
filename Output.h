@@ -20,11 +20,8 @@ public:
   Output(MPI_Comm *comm_, Input *input, int argc, char* argv[]);
   ~Output();
   
-  void output_solution(int iFrame, int iTimeStep, vector<Vec3D> &q_Pd, vector<Vec3D> &q_H,
-                     vector<double> &sigma_Pd, vector<double> &sigma_H, vector<double> &x,
-                     vector<double> &gamma, vector<int> &full_H); 
-
-  const string getCurrentDateTime();
-  void printLogo(int argc, char *argv[]);
+  void OutputSolution(int iFrame, int iTimeStep, vector<Vec3D> &q_Pd, vector<Vec3D> &q_H,
+                      vector<double> &sigma_Pd, vector<double> &sigma_H, vector<double> &x,
+                      vector<double> &gamma, vector<int> &full_H); 
 };
 #endif

@@ -9,11 +9,8 @@ using namespace std;
 
 //--------------------------------------------------------------------------------
 
-Output::Output(MPI_Comm *comm_, Input* input, int argc, char* argv[]) : comm(comm_)
+Output::Output(MPI_Comm *comm_, IoData* input, int argc, char* argv[]) : comm(comm_)
 {
-
-  printLogo(argc, argv);
-
 
   int MPI_rank = 0;
   MPI_Comm_rank(*comm, &MPI_rank);

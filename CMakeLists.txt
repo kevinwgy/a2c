@@ -72,7 +72,7 @@ initialize.cpp
 integrate.cpp
 minimizer.cpp
 neighbors.cpp
-output.cpp
+Output.cpp
 potential.cpp
 quadrature.cpp
 readresults.cpp
