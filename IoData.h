@@ -156,7 +156,7 @@ struct CylinderSphereData {
 struct LatticeSiteData
 {
   double la, lb, lc;
-  int group_id;
+  int materialid;
 
   LatticeSiteData();
   ~LatticeSiteData() {}
@@ -184,37 +184,88 @@ struct LatticeData
   ObjectMap<LatticeSiteData> siteMap;
   
   double dmin; //!< min spacing between sites on this lattice and those on other lattices
+
+  LatticeData();
+  ~LatticeData() {}
+
+  Assigner *getAssigner();
+
 };
 
 //------------------------------------------------------------------------------
 
-struct IcData
+struct SpeciesData
 {
-  double xe; //!< solute molar fraction
+  int id; //!< species id
+  const char* name; //!< species name (optional)
 
-  double sigma_0; //!< matrix atom freq. (Ang^-2)
-  double sigma_1; //1< solute atom frequency (Ang^-2)
+  enum Boolean {FALSE = 0, TRUE = 1} diffusive; 
 
-  IcData();
-  ~IcData() {}
+  double molar_fraction; //!< initial value (optional)
+  double atomic_frequency; //!< initial value (optional)
+  double mean_displacement_x; //!< initial value (optional)
+  double mean_displacement_y;
+  double mean_displacement_z;
+  double mean_momentum_x; //!< initial value (optional)
+  double mean_momentum_y;
+  double mean_momentum_z;
+  
+  double min_molar_fraction; //!< a smaller number to avoid division-by-zero
 
-  void setup(const char *);
+  SpeciesData();
+  ~SpeciesData() {}
+
+  Assigner *getAssigner();
 };
 
 //------------------------------------------------------------------------------
 
-struct PotentialData
+struct InteratomicPotentialData
 {
-
   const char* filename;
 
   double eps; // tolerance
   double rc;  // cutoff distance (Ang)
 
-  PotentialData();
-  ~PotentialData() {}
+  InteratomicPotentialData();
+  ~InteratomicPotentialData() {}
 
   void setup(const char *);
+};
+
+//------------------------------------------------------------------------------
+
+struct MaterialData 
+{
+  ObjectMap<SpeciesData> speciesMap;
+    
+  InteratomicPotentialData potential;
+
+  MaterialData();
+  ~MaterialData() {}
+
+  Assigner *getAssigner();
+};
+
+//------------------------------------------------------------------------------
+
+//! pecify initial conditions for material(s) and species(s) within a region
+struct RegionalIcData
+{
+  ObjectMap<PlaneData>          planeMap;
+  ObjectMap<CylinderConeData>   cylinderconeMap;
+  ObjectMap<CylinderSphereData> cylindersphereMap;
+  ObjectMap<SphereData>         sphereMap;
+  ObjectMap<ParallelepipedData> parallelepipedMap;
+  ObjectMap<SpheroidData>       spheroidMap;
+  const char *custom_geometry_specifier;
+
+  ObjectMap<SpeciesData> speciesMap;
+    
+  RegionalIcData();
+  ~RegionalIcData() {}
+
+  Assigner *getAssigner();
 };
 
 //------------------------------------------------------------------------------
@@ -261,13 +312,15 @@ struct TsData
 
 struct OutputData
 {
+  enum FileFormat {VTP = 0, XYZ = 1, VTP_and_XYZ = 2} format;
 
   const char* prefix;
-  const char* filename_base;
+  const char* solution_filename_base;
 
   enum VerbosityLevel {LOW = 0, MEDIUM = 1, HIGH = 2} verbose;
 
   int frequency;
+  double frequency_dt;
 
   OutputData();
   ~OutputData() {}
@@ -303,9 +356,9 @@ public:
 
   ObjectMap<LatticeData> latticeMap;
 
-  PotentialData potential;
+  ObjectMap<MaterialData> materialMap; //!< a ``material'' can/often has multiple species
 
-  IcData ic;
+  ObjectMap<RegionalIcData> icMap;
 
   DiffusionData diffusion;
 

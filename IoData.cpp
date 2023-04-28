@@ -291,7 +291,7 @@ Assigner *CylinderSphereData::getAssigner()
 LatticeSiteData::LatticeSiteData()
 {
   la = lb = lc = -1.0;
-  group_id = -1;
+  materialid = -1;
 }
 
 //---------------------------------------------------------
@@ -303,7 +303,7 @@ Assigner *LatticeSiteData::getAssigner()
   new ClassDouble<LatticeSiteData> (ca, "La", this, &LatticeSiteData::la);
   new ClassDouble<LatticeSiteData> (ca, "Lb", this, &LatticeSiteData::lb);
   new ClassDouble<LatticeSiteData> (ca, "Lc", this, &LatticeSiteData::lc);
-  new ClassInt<LatticeSiteData> (ca, "Group", this, &LatticeSiteData::group_id);
+  new ClassInt<LatticeSiteData> (ca, "MaterialID", this, &LatticeSiteData::materialid);
 }
 
 //---------------------------------------------------------
@@ -311,6 +311,13 @@ Assigner *LatticeSiteData::getAssigner()
 LatticeData::LatticeData()
 {
   custom_geometry_specifier = "";
+
+  ax = 1.0; ay = 0.0; az = 0.0;
+  bx = 0.0; by = 1.0; bz = 0.0;
+  cx = 0.0; cy = 0.0; cz = 1.0;
+  ox = oy = oz = 0.0;
+
+  dmin = 0.0; 
 }
 
 //---------------------------------------------------------
@@ -326,7 +333,8 @@ void LatticeData::setup(const char *name)
   spheroidMap.setup("Spheroid", ca);
   cylinderconeMap.setup("CylinderAndCone", ca);
   cylindersphereMap.setup("CylinderWithSphericalCaps", ca);
-  new ClassStr<LatticeDomainData> (ca, "GeometrySpecifier", this, &LatticeDomainData::custom_geometry_specifier);
+
+  new ClassStr<LatticeData> (ca, "GeometrySpecifier", this, &LatticeData::custom_geometry_specifier);
 
   new ClassDouble<LatticeData> (ca, "OAx", this, &LatticeData::ax);
   new ClassDouble<LatticeData> (ca, "OAy", this, &LatticeData::ay);
@@ -350,29 +358,48 @@ void LatticeData::setup(const char *name)
 
 //---------------------------------------------------------
 
-IcData::IcData()
+SpeciesData::SpeciesData()
 {
-  xe = 0.0; 
-  sigma_0 = 1000.0;
-  sigma_1 = 1000.0;
+  id = -1;
+  name = "";
+  diffusive = TRUE;
+  molar_fraction = 1.0e-3;
+  atomic_frequency = 0.0; 
+  mean_displacement_x = mean_displacement_y = mean_displacement_z = 0.0;
+  mean_momentum_x     = mean_momentum_y     = mean_momentum_z     = 0.0;
+  min_molar_fraction = 1.0e-4;
 }
 
 //---------------------------------------------------------
 
-void SpaceData::setup(const char *name)
+Assigner *SpeciesData::getAssigner()
 {
- 
-  ClassAssigner *ca = new ClassAssigner(name, 3, 0);
 
-  new ClassDouble<SpaceData> (ca, "SoluteMolarFraction", this, &SpaceData::xe);
-  new ClassDouble<SpaceData> (ca, "Sigma0", this, &SpaceData::sigma_0);
-  new ClassDouble<SpaceData> (ca, "Sigma1", this, &SpaceData::sigma_1);
-  
+  ClassAssigner *ca = new ClassAssigner("normal", 12, nullAssigner);
+
+  new ClassInt<SpeciesData> (ca, "ID", this, &SpeciesData::id);
+  new ClassStr<SpeciesData> (ca, "Name", this, &PotentialData::filename);
+
+  new ClassToken<SpeciesData>(ca, "Diffusive", this,
+                               reinterpret_cast<int SpeciesData::*>(&SpeciesData::diffusion), 2,
+                               "False", 0, "True", 1);
+
+  new ClassDouble<SpeciesData> (ca, "MolarFraction", this, &SpeciesData::molar_fraction);
+  new ClassDouble<SpeciesData> (ca, "AtomicFrequency", this, &SpeciesData::atomic_frequency);
+  new ClassDouble<SpeciesData> (ca, "MeanDisplacementX", this, &SpeciesData::mean_displacement_x);
+  new ClassDouble<SpeciesData> (ca, "MeanDisplacementY", this, &SpeciesData::mean_displacement_y);
+  new ClassDouble<SpeciesData> (ca, "MeanDisplacementZ", this, &SpeciesData::mean_displacement_z);
+  new ClassDouble<SpeciesData> (ca, "MeanMomentumX", this, &SpeciesData::mean_momentum_x);
+  new ClassDouble<SpeciesData> (ca, "MeanMomentumY", this, &SpeciesData::mean_momentum_y);
+  new ClassDouble<SpeciesData> (ca, "MeanMomentumZ", this, &SpeciesData::mean_momentum_z);
+
+  new ClassDouble<SpeciesData> (ca, "MinimumMolarFraction", this, &SpeciesData::min_molar_fraction);
+
 }
 
 //---------------------------------------------------------
 
-PotentialData::PotentialData() 
+InteratomicPotentialData::InteratomicPotentialData() 
 {
   filename = "";
   eps = 1.0e-5; 
@@ -381,16 +408,59 @@ PotentialData::PotentialData()
 
 //---------------------------------------------------------
 
-void PotentialData::setup(const char *name)
+void InteratomicPotentialData::setup(const char *name)
 {
  
   ClassAssigner *ca = new ClassAssigner(name, 3, 0);
 
-  new ClassStr<PotentialData> (ca, "File", this, &PotentialData::filename);
+  new ClassStr<InteratomicPotentialData> (ca, "File", this, &InteratomicPotentialData::filename);
 
-  new ClassDouble<PotentialData> (ca, "Tolerance", this, &PotentialData::eps);
+  new ClassDouble<InteratomicPotentialData> (ca, "Tolerance", this, &InteratomicPotentialData::eps);
 
-  new ClassDouble<PotentialData> (ca, "CutOffDistance", this, &PotentialData::rc);
+  new ClassDouble<InteratomicPotentialData> (ca, "CutOffDistance", this, &InteratomicPotentialData::rc);
+
+}
+
+//---------------------------------------------------------
+
+MaterialData::MaterialData()
+{ }
+
+//---------------------------------------------------------
+
+Assigner *MaterialData::getAssigner()
+{
+  ClassAssigner *ca = new ClassAssigner(name, 2, 0);
+
+  speciesMap.setup("Species");
+
+  potential.setup("InteratomicPotential");
+}
+
+//---------------------------------------------------------
+
+RegionalIcData::RegionalIcData()
+{
+  custom_geometry_specifier = "";
+}
+
+//---------------------------------------------------------
+
+Assigner *RegionalIcData::getAssigner()
+{
+
+  ClassAssigner *ca = new ClassAssigner(name, 8, 0);
+
+  planeMap.setup("Plane", ca);
+  sphereMap.setup("Sphere", ca);
+  parallelepiped.setup("Parallelepiped", ca);
+  spheroidMap.setup("Spheroid", ca);
+  cylinderconeMap.setup("CylinderAndCone", ca);
+  cylindersphereMap.setup("CylinderWithSphericalCaps", ca);
+
+  new ClassStr<RegionalIcData> (ca, "GeometrySpecifier", this, &RegionalIcData::custom_geometry_specifier);
+
+  speciesMap.setup("Species", ca);
 
 }
 
@@ -401,8 +471,6 @@ DiffusionData::DiffusionData()
   T0 = 300; 
   v = 0.0;
   Qm = 0.0;
-  xUb = 1.0;
-  xLb = 0.0;
   t_subsurf = 0.0;
   mubd = -2.0; // dimensional (pressure)
 }
@@ -412,15 +480,12 @@ DiffusionData::DiffusionData()
 void DiffusionData::setup(const char *name)
 {
  
-  ClassAssigner *ca = new ClassAssigner(name, 7, 0);
+  ClassAssigner *ca = new ClassAssigner(name, 5, 0);
 
   new ClassDouble<DiffusionData> (ca, "Temperature", this, &DiffusionData::T0);
 
   new ClassDouble<DiffusionData> (ca, "AttemptFrequency", this, &DiffusionData::v);
   new ClassDouble<DiffusionData> (ca, "ActivationEnergy", this, &DiffusionData::Qm);
-
-  new ClassDouble<DiffusionData> (ca, "FractionUpperBound", this, &DiffusionData::xUb);
-  new ClassDouble<DiffusionData> (ca, "FractionLowerBound", this, &DiffusionData::xLb);
 
   new ClassDouble<DiffusionData> (ca, "SubsurfaceThickness", this, &DiffusionData::t_subsurf);
   new ClassDouble<DiffusionData> (ca, "SoluteChemicalPotential", this, &DiffusionData::mubd);
@@ -452,9 +517,11 @@ void TsData::setup(const char *name)
 
 OutputData::OutputData()
 {
+  format = VTP;
   prefix = "";
-  filename_base = "";
-  frequency = 100;
+  solution_filename_base = "solution";
+  frequency = 0;
+  frequency_dt = -1.0;
   verbose = LOW;
 }
 
@@ -463,13 +530,19 @@ OutputData::OutputData()
 void OutputData::setup(const char *name)
 {
 
-  ClassAssigner *ca = new ClassAssigner(name, 4, 0);
+  ClassAssigner *ca = new ClassAssigner(name, 6, 0);
+
+  new ClassToken<OutputData>(ca, "Format", this,
+                               reinterpret_cast<int OutputData::*>(&OutputData::format), 4,
+                               "VTP", 0, "XYZ", 1, "VTP_and_XYZ", 2, "XYZ_and_VTP", 2);
 
   new ClassStr<OutputData> (ca, "Prefix", this, &OutputData::prefix);
 
-  new ClassStr<OutputData> (ca, "Solution", this, &OutputData::filename_base);
+  new ClassStr<OutputData> (ca, "Solution", this, &OutputData::solution_filename_base);
 
   new ClassInt<OutputData> (ca, "Frequency", this, &OutputData::frequency);
+
+  new ClassDouble<OutputData>(ca, "TimeInterval", this, &OutputData::frequency_dt);
 
   new ClassToken<OutputData>(ca, "VerboseScreenOutput", this,
                                reinterpret_cast<int OutputData::*>(&OutputData::verbose), 3,
@@ -551,9 +624,9 @@ void IoData::setupCmdFileVariables()
 
   latticeMap.setup("Lattice", ca);
 
-  potential.setup("Potential");
+  materialMap.setup("Material", ca);
 
-  ic.setup("InitialCondition");
+  icMap.setup("RegionalInitialCondition", ca);
 
   diffusion.seutp("Diffusion");
 

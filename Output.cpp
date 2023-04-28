@@ -1,60 +1,46 @@
-#include <time.h>
-#include <output.h>
-#include <input.h>
+#include <Output.h>
 #include <Vector3D.h>
-#include <version.h>
+#include <Utils.h>
 #include <cstring>
-#include <unistd.h> //sleep
-using namespace std;
+using std::vector;
 
 //--------------------------------------------------------------------------------
 
-Output::Output(MPI_Comm *comm_, IoData* input, int argc, char* argv[]) : comm(comm_)
+Output::Output(MPI_Comm &comm_, IoData& iod_) : comm(comm_), iod(iod_)
 {
+  sprintf(filename_base, "%s%s", iod.output.prefix, iod.output.solution_filename_base);
 
-  int MPI_rank = 0;
-  MPI_Comm_rank(*comm, &MPI_rank);
-  if(MPI_rank)
-    return;
-  
-  sprintf(full_filename_base, "%s/%s", input->file.foldername, input->file.filename_base);
-  sprintf(filename_base, "%s", input->file.filename_base);
-  char f1[256];
-  sprintf(f1, "%s_summary.txt", full_filename_base);
+  iFrame = 0;
 
-  summaryfile.open(f1, ios::out);
-  summaryfile << "Revision: " << GIT_REV << " | " << "Branch: " << GIT_BRANCH << " | " << "Tag: " << GIT_TAG << endl;
-  summaryfile << "Computation started at:" << endl;
-  summaryfile << "  " << getCurrentDateTime() << endl;
-  summaryfile << endl;
-  summaryfile << "Inputs" << endl;
-  summaryfile << "  T0 = " << input->file.T0 << endl;
-  summaryfile << "  eps = " << input->file.eps << endl;
-  summaryfile << "  rc = " << input->file.rc << endl;
-  summaryfile << "  dt = " << input->file.dt << endl;
-  summaryfile << "  t_final = " << input->file.t_final << endl;
-  summaryfile << "  N = " << input->file.N << endl;
-  summaryfile << "  xe = " << input->file.xe << endl;
-  summaryfile << "  a_Pd = " << input->file.a_Pd << endl;
-  summaryfile << "  sigma_Pd = " << input->file.sigma_Pd << endl;
-  summaryfile << "  sigma_H = " << input->file.sigma_H << endl;
-  summaryfile << "  output_frequency = " << input->file.output_frequency << endl;
-  summaryfile << "  v = " << input->file.v << endl;
-  summaryfile << "  Qm = " << input->file.Qm << endl;
-  summaryfile << "  mubd = " << input->file.mubd << endl;
-  summaryfile << "  t_subsurf = " << input->file.t_subsurf << endl;
+  last_snapshot_time = -1.0;
 }
 
 //--------------------------------------------------------------------------------
 
 Output::~Output()
 {
-  if(summaryfile.is_open()) summaryfile.close();
 }
 
 //--------------------------------------------------------------------------------
 
-void Output::output_solution(int iFrame, int iTimeStep, vector<Vec3D> &q_Pd, vector<Vec3D> &q_H,
+void Output::OutputSolution(double time, double dt, int time_step, Variables &V, bool force_write)
+{
+
+  if(isTimeToWrite(time, dt, time_step, iod.output.frequency_dt, iod.output.frequency,
+                   last_snapshot_time, force_write)) {
+    if(iod.output.format == Output::VTP || iod.output.format == Output::VTP_and_XYZ)
+      OutputSolutionVTP(time, time_step, V);
+    else if(iod.output.format == Output::XYZ || iod.output.format == Output::VTP_and_XYZ)
+      OutputSolutionXYZ(time, time_step, V);
+  }
+
+}
+
+//--------------------------------------------------------------------------------
+
+void Output::OutputSolutionXYZ(double time, int time_step, Variables &V) 
+
+int iFrame, int iTimeStep, vector<Vec3D> &q_Pd, vector<Vec3D> &q_H,
                      vector<double> &sigma_Pd, vector<double> &sigma_H, vector<double> &x, 
                      vector<double> &gamma, vector<int> &full_H)
 {
@@ -134,31 +120,4 @@ const string Output::getCurrentDateTime()
 }
 
 //--------------------------------------------------------------------------------
-
-void Output::printLogo(int argc, char *argv[])
-{
-  int MPI_rank = 0, MPI_size = 0;
-  MPI_Comm_size(*comm, &MPI_size);
-  MPI_Comm_rank(*comm, &MPI_rank);
-
-  if(!MPI_rank) {
-    cout << endl;
-    cout << "  ____                 _ _      _      _    ____   ____ " << endl;
-    cout << " |  _ \\ __ _ _ __ __ _| | | ___| |    / \\  |___ \\ / ___|" << endl;
-    cout << " | |_) / _` | '__/ _` | | |/ _ \\ |   / _ \\   __) | |    " << endl;
-    cout << " |  __/ (_| | | | (_| | | |  __/ |  / ___ \\ / __/| |___ " << endl;
-    cout << " |_|   \\__,_|_|  \\__,_|_|_|\\___|_| /_/   \\_\\_____|\\____|" << endl;
-    cout << endl;
-    cout << "Revision: " << GIT_REV << " | " << "Branch: " << GIT_BRANCH << " | " << "Tag: " << GIT_TAG << endl;
-    cout << "Computation started at: " << getCurrentDateTime() << endl;
-    cout << "Using " << MPI_size << " processor cores (including concurrent programs)." << endl;
-    cout << "Command:";
-    for(int i=0; i<argc; i++)
-      cout << " " << argv[i];
-    cout << endl;
-    cout.flush();
-  } else
-    sleep(0.1);
-}
-
 

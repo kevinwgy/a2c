@@ -12,7 +12,7 @@
 #include <math.h>
 #include <Shells.h>
 #include <IoData.h>
-#include <output.h>
+#include <Output.h>
 #include <minimizer.h>
 #include <Utils.h>
 
@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
   IoData iod(argc, argv);
   verbose = iod.output.verbose;
 
-  Output output(&comm, &input, argc, argv);
+  Output output(comm, iod);
 
   //--------------------------------------------------------------
   // Create Shells

@@ -63,7 +63,9 @@ add_custom_target(
 add_executable(dmd
 Main.cpp
 IoData.cpp
-Shells.cpp
+Lattice.cpp
+Variables.cpp
+Output.cpp
 Utils.cpp
 boundaryconditions.cpp
 calculateresults.cpp
@@ -72,7 +74,6 @@ initialize.cpp
 integrate.cpp
 minimizer.cpp
 neighbors.cpp
-Output.cpp
 potential.cpp
 quadrature.cpp
 readresults.cpp

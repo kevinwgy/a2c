@@ -1,27 +1,32 @@
 #ifndef _OUTPUT_H_
 #define _OUTPUT_H_
-#include <mpi.h>
-#include <stdio.h>
-#include <iostream>
-#include <fstream>
+#include <IoData.h>
 #include <vector>
-#include <string>
-using namespace std;
+
 struct Vec3D;
-struct Input;
+class Variables;
 
 class Output {
-  MPI_Comm *comm;
-  char filename_base[128];
-  char full_filename_base[128];
-  ofstream summaryfile;
+
+  MPI_Comm &comm;
+  IoData &iod;
+
+  char filename_base[256];
+
+  int iFrame;
+  double last_snapshot_time;
 
 public:
-  Output(MPI_Comm *comm_, Input *input, int argc, char* argv[]);
+
+  Output(MPI_Comm &comm_, IoData &iod_);
   ~Output();
   
-  void OutputSolution(int iFrame, int iTimeStep, vector<Vec3D> &q_Pd, vector<Vec3D> &q_H,
-                      vector<double> &sigma_Pd, vector<double> &sigma_H, vector<double> &x,
-                      vector<double> &gamma, vector<int> &full_H); 
+  void OutputSolution(double time, double dt, int time_step, Variables &V, bool force_write = false);
+
+private:
+
+  void OutputSolutionVTP(double time, int time_step, Variables &V);
+  void OutputSolutionXYZ(double time, int time_step, Variables &V);
+
 };
 #endif
