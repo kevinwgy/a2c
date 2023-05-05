@@ -18,25 +18,13 @@ Output::Output(MPI_Comm &comm_, IoData& iod_)
   // store material names
   int nMaterials = iod.materialMap.dataMap.size();
   material_name.resize(nMaterials);
-  std::set<int> material_tracker; //for error detection only
   for(auto it = iod.materialMap.dataMap.begin(); it != iod.materialMap.dataMap.end(); it++) {
     int matid = it->first;
-    if(matid<0 || matid>=(int)nMaterials) {
-      print_error("*** Error: Detected error in the specification of material index (id = %d).\n", matid);
-      exit_mpi();
-    }
-    material_tracker.insert(matid);
-
-    if(strcmp(it->second.name, "")==0) 
+    if(strcmp(it->second.name, "")==0) //user did not specify a name
       material_name[matid] = "Mat" + std::to_string(matid);
     else
       material_name[matid] = it->second.name;
   }
-  if(material_tracker.size() != nMaterials) {
-    print_error("*** Error: Detected error in the specification of material indices.\n");
-    exit_mpi();
-  }
-
 
   // store lattice axes and origins
   int nLattices = iod.latticeMap.dataMap.size();
@@ -48,14 +36,8 @@ Output::Output(MPI_Comm &comm_, IoData& iod_)
   periodic_b.resize(nLattices);
   periodic_c.resize(nLattices);
 
-  std::set<int> lattice_tracker; //for error detection only
   for(auto it = iod.latticeMap.dataMap.begin(); it != iod.latticeMap.dataMap.end(); it++) {
     int lattice_id = it->first;
-    if(lattice_id<0 || lattice_id>=(int)nLattices) {
-      print_error("*** Error: Detected error in the specification of lattice index (id = %d).\n", lattice_id);
-      exit_mpi();
-    }
-    lattice_tracker.insert(lattice_id);
 
     axis_a[lattice_id][0] = it->second.ax;
     axis_a[lattice_id][1] = it->second.ay;
@@ -78,13 +60,8 @@ Output::Output(MPI_Comm &comm_, IoData& iod_)
     periodic_c[lattice_id] = (it->second.periodic_c == LatticeData::TRUE) ? "T" : "F";
   }
 
-  if(lattice_tracker.size() != nLattices) {
-    print_error("*** Error: Detected error in the specification of lattice indices.\n");
-    exit_mpi();
-  }
 
-
-  // setup pvd file if needed
+  // write the header of the pvd file if needed
   if(iod.output.format == Output::VTP || iod.output.format == Output::VTP_and_XYZ) {
     for(int lat=0; lat<(int)VS.size(); lat++) {
       char f1[256];
@@ -120,20 +97,19 @@ Output::~Output()
 //--------------------------------------------------------------------------------
 
 void
-Output::OutputSolution(double time, double dt, int time_step, LatticeVariables &V, bool force_write)
+Output::OutputSolution(double time, double dt, int time_step, vector<LatticeVariables> &VS,
+                       bool force_write)
 {
-
   if(isTimeToWrite(time, dt, time_step, iod.output.frequency_dt, iod.output.frequency,
                    last_snapshot_time, force_write)) {
     if(iod.output.format == Output::VTP || iod.output.format == Output::VTP_and_XYZ)
-      OutputSolutionVTP(time, time_step, V);
+      OutputSolutionVTP(time, time_step, VS);
     else if(iod.output.format == Output::XYZ || iod.output.format == Output::VTP_and_XYZ)
-      OutputSolutionXYZ(time, time_step, V);
+      OutputSolutionXYZ(time, time_step, VS);
 
     iFrame++;
     last_snapshot_time = time;
   }
-
 }
 
 //--------------------------------------------------------------------------------
@@ -186,7 +162,10 @@ Output::OutputSolutionOnLatticeVTP(double time, int lattice_id, LatticeVariables
 
 
   FILE *vtpfile = fopen(full_fname, "w");
-  assert(vtpfile);
+  if(!vtpfile) {
+    print_error("*** Error: Cannot open file '%s' for output.\n", full_fname);
+    exit_mpi();
+  }   
 
   // Write header (only proc #0 will write)
   print(vtpfile, "<?xml version=\"1.0\"?>\n");
@@ -246,7 +225,8 @@ Output::OutputSolutionOnLatticeVTP(double time, int lattice_id, LatticeVariables
   assert(ns>0);
 
   // Write molar fraction
-  print(vtpfile, "        <DataArray type=\"Float32\" NumberOfComponents=\"%d\" Name=\"MolarFraction\" format=\"ascii\">\n", ns);
+  print(vtpfile, "        <DataArray type=\"Float32\" NumberOfComponents=\"%d\" "
+                 "Name=\"MolarFraction\" format=\"ascii\">\n", ns);
   print(vtpfile, "          ");
   assert(V.x.size() == V.q.size());
   for(auto&& x : V.x) {
@@ -259,7 +239,8 @@ Output::OutputSolutionOnLatticeVTP(double time, int lattice_id, LatticeVariables
   print(vtpfile, "        </DataArray>\n");
 
   // Write chemical potential 
-  print(vtpfile, "        <DataArray type=\"Float32\" NumberOfComponents=\"%d\" Name=\"ChemicalPotential\" format=\"ascii\">\n", ns);
+  print(vtpfile, "        <DataArray type=\"Float32\" NumberOfComponents=\"%d\" "
+                 "Name=\"ChemicalPotential\" format=\"ascii\">\n", ns);
   print(vtpfile, "          ");
   assert(V.gamma.size() == V.q.size());
   for(auto&& gam : V.gamma) {
@@ -294,7 +275,7 @@ Output::OutputSolutionOnLatticeVTP(double time, int lattice_id, LatticeVariables
   fclose(pvdfile);
   delete pvdfile;
 
-  print("- Wrote solution at %e to %s.\n", time, fname);
+  print("- Wrote solution on Lattice[%d] at %e to %s.\n", lattice_id, time, fname);
 
 }
 
@@ -403,6 +384,8 @@ Output::OutputSolutionOnLatticeXYZ(double time, int lattice_id, LatticeVariables
 
   fclose(xyzfile);
   delete xyzfile;
+
+  print("- Wrote solution on Lattice[%d] at %e to %s.\n", lattice_id, time, fname);
 }
 
 //--------------------------------------------------------------------------------

@@ -17,6 +17,8 @@ public:
   std::vector<int> siteid; //!< the site group id of each site
   std::vector<int> matid; //!< the material id of each 
 
+  std::vector<Vec3D> l; //!< lattice coordinates (non-dimensional)
+
   std::vector<Vec3D> q; //!< mean position (NOT displacement)
   std::vector<Vec3D> q0; //!< initial mean position
 

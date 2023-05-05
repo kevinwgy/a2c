@@ -15,6 +15,7 @@
 #include <Output.h>
 #include <minimizer.h>
 #include <Utils.h>
+using std::vector;
 
 int verbose;
 clock_t start_time;
@@ -63,29 +64,60 @@ int main(int argc, char* argv[])
   IoData iod(argc, argv);
   verbose = iod.output.verbose;
 
+  //--------------------------------------------------------------
+  // Setup materials
+  //--------------------------------------------------------------
+  vector<MaterialOperator> mo;
+  int nMaterials = iod.materialMap.dataMap.size();
+  mo.resize(nMaterials);
+  std::set<int> material_tracker; //for error detection only
+  for(auto it = iod.materialMap.dataMap.begin(); it != iod.materialMap.dataMap.end(); it++) {
+    int matid = it->first;
+    if(matid<0 || matid>=(int)nMaterials) {
+      print_error("*** Error: Detected error in the specification of material index (id = %d).\n", matid);
+      exit_mpi();
+    }
+    material_tracker.insert(matid);
+
+    mo[matid].Setup(matid, it->second);
+  }
+  if(material_tracker.size() != nMaterials) {
+    print_error("*** Error: Detected error in the specification of material indices.\n");
+    exit_mpi();
+  } 
+
+  //--------------------------------------------------------------
+  // Setup lattice constants
+  //--------------------------------------------------------------
+  vector<LatticeInfo> lattice_info;
+  int nLattices = iod.latticeMap.dataMap.size();
+  lattice_info.resize(nLattices);
+  std::set<int> lattice_tracker; //for error detection only
+  for(auto it = iod.latticeMap.dataMap.begin(); it != iod.latticeMap.dataMap.end(); it++) {
+    int lattice_id = it->first;
+    if(lattice_id<0 || lattice_id>=(int)nLattices) {
+      print_error("*** Error: Detected error in the specification of lattice index (id = %d).\n", lattice_id);
+      exit_mpi();
+    }
+    lattice_tracker.insert(lattice_id);
+    lattice_info[lattice_id].Setup(lattice_id, it->second, nMaterials);
+  }
+  if(lattice_tracker.size() != nLattices) {
+    print_error("*** Error: Detected error in the specification of lattice indices.\n");
+    exit_mpi();
+  }
+
+  //--------------------------------------------------------------
+  // Setup outputs
+  //--------------------------------------------------------------
   Output output(comm, iod);
 
   //--------------------------------------------------------------
-  // Create Shells
+  // Create the ``specimen''
   //--------------------------------------------------------------
-  int NC = 1.5*input.file.N*input.file.N + 4; //number of shells to be computed. TODO: enough?
-  vector<vector<Int3> > SS1; // PdPd
-  vector<vector<Int3> > SS2; // PdH
-  generateShells(NC,&SS1); //TODO: need to be expanded to include FCC
-  generateInterstitialShells(NC,&SS2); //TODO: need to be extended to include FCC
- 
+  vector<LatticeVariables> VS(nLattices);
+  SpaceOperator spo(comm, iod, mo, lattice_info, VS); //also initializes VS
 
-  if(!MPI_rank) {
-    if(input.file.sample_shape == 1) {
-        cout << "- Shape of nanoparticle: cube." << endl; cout.flush();}
-    else if(input.file.sample_shape == 2) {
-        cout << "- Shape of nanoparticle: octahedron." << endl; cout.flush();}
-    else if(input.file.sample_shape == 3) {
-        cout << "- Shape of nanoparticle: sphere." << endl; cout.flush();}
-    else {
-        cerr << "Error: SampleShapeType in input.st must be 1 (cube), 2 (octahedron) or 3 (sphere)." << endl; cout.flush();
-        exit(-1);}
-    cout << "- Generated neighbor shells. " << endl; cout.flush();}
 
   //--------------------------------------------------------------
   // Initialize state: atomic positions, vibration frequencies, H molar fractions

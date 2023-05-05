@@ -60,16 +60,17 @@ add_custom_target(
 )
 
 # add the executable
-add_executable(dmd
+add_executable(a2c
 Main.cpp
 IoData.cpp
-Lattice.cpp
+LatticeInfo.cpp
 Output.cpp
 Utils.cpp
+MaterialOperator.cpp
+SpaceOperator.cpp
 boundaryconditions.cpp
 calculateresults.cpp
 electrondensity.cpp
-initialize.cpp
 integrate.cpp
 minimizer.cpp
 neighbors.cpp
@@ -81,7 +82,7 @@ GeoTools/GeoTools.cpp
 
 
 # link to libraries
-target_link_libraries(dmd petsc mpi parser)
-target_link_libraries(dmd ${CMAKE_DL_LIBS}) #linking to the dl (dynamic load) library (-ldl)
-add_dependencies(dmd extern_lib)
-add_dependencies(dmd VersionHeader)
+target_link_libraries(a2c petsc mpi parser)
+target_link_libraries(a2c ${CMAKE_DL_LIBS}) #linking to the dl (dynamic load) library (-ldl)
+add_dependencies(a2c extern_lib)
+add_dependencies(a2c VersionHeader)
