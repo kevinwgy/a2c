@@ -317,6 +317,10 @@ LatticeData::LatticeData()
   cx = 0.0; cy = 0.0; cz = 1.0;
   ox = oy = oz = 0.0;
 
+  a_periodic = FALSE;
+  b_periodic = FALSE;
+  c_periodic = FALSE;
+
   dmin = 0.0; 
 }
 
@@ -325,7 +329,7 @@ LatticeData::LatticeData()
 void LatticeData::setup(const char *name)
 {
 
-  ClassAssigner *ca = new ClassAssigner(name, 21, 0);
+  ClassAssigner *ca = new ClassAssigner(name, 24, 0);
 
   planeMap.setup("Plane", ca);
   sphereMap.setup("Sphere", ca);
@@ -350,6 +354,16 @@ void LatticeData::setup(const char *name)
   new ClassDouble<LatticeData> (ca, "Oy", this, &LatticeData::oy);
   new ClassDouble<LatticeData> (ca, "Oz", this, &LatticeData::oz);
   
+  new ClassToken<LatticeData>(ca, "PeriodicAlongOA", this,
+                              reinterpret_cast<int LatticeData::*>(&LatticeData::a_periodic), 2,
+                              "False", 0, "True", 1);
+  new ClassToken<LatticeData>(ca, "PeriodicAlongOB", this,
+                              reinterpret_cast<int LatticeData::*>(&LatticeData::b_periodic), 2,
+                              "False", 0, "True", 1);
+  new ClassToken<LatticeData>(ca, "PeriodicAlongOC", this,
+                              reinterpret_cast<int LatticeData::*>(&LatticeData::c_periodic), 2,
+                              "False", 0, "True", 1);
+
   siteMap.setup("Site", ca);
 
   new ClassDouble<LatticeData> (ca, "MinDistance", this, &LatticeData::dmin);
@@ -364,9 +378,6 @@ SpeciesData::SpeciesData()
   name = "";
   diffusive = TRUE;
   molar_fraction = 1.0e-3;
-  atomic_frequency = 0.0; 
-  mean_displacement_x = mean_displacement_y = mean_displacement_z = 0.0;
-  mean_momentum_x     = mean_momentum_y     = mean_momentum_z     = 0.0;
   min_molar_fraction = 1.0e-4;
 }
 
@@ -375,23 +386,16 @@ SpeciesData::SpeciesData()
 Assigner *SpeciesData::getAssigner()
 {
 
-  ClassAssigner *ca = new ClassAssigner("normal", 12, nullAssigner);
+  ClassAssigner *ca = new ClassAssigner("normal", 5, nullAssigner);
 
   new ClassInt<SpeciesData> (ca, "ID", this, &SpeciesData::id);
-  new ClassStr<SpeciesData> (ca, "Name", this, &PotentialData::filename);
+  new ClassStr<SpeciesData> (ca, "SpeciesName", this, &SpeciesData::name);
 
   new ClassToken<SpeciesData>(ca, "Diffusive", this,
                                reinterpret_cast<int SpeciesData::*>(&SpeciesData::diffusion), 2,
                                "False", 0, "True", 1);
 
   new ClassDouble<SpeciesData> (ca, "MolarFraction", this, &SpeciesData::molar_fraction);
-  new ClassDouble<SpeciesData> (ca, "AtomicFrequency", this, &SpeciesData::atomic_frequency);
-  new ClassDouble<SpeciesData> (ca, "MeanDisplacementX", this, &SpeciesData::mean_displacement_x);
-  new ClassDouble<SpeciesData> (ca, "MeanDisplacementY", this, &SpeciesData::mean_displacement_y);
-  new ClassDouble<SpeciesData> (ca, "MeanDisplacementZ", this, &SpeciesData::mean_displacement_z);
-  new ClassDouble<SpeciesData> (ca, "MeanMomentumX", this, &SpeciesData::mean_momentum_x);
-  new ClassDouble<SpeciesData> (ca, "MeanMomentumY", this, &SpeciesData::mean_momentum_y);
-  new ClassDouble<SpeciesData> (ca, "MeanMomentumZ", this, &SpeciesData::mean_momentum_z);
 
   new ClassDouble<SpeciesData> (ca, "MinimumMolarFraction", this, &SpeciesData::min_molar_fraction);
 
@@ -424,13 +428,17 @@ void InteratomicPotentialData::setup(const char *name)
 //---------------------------------------------------------
 
 MaterialData::MaterialData()
-{ }
+{
+  name = "";
+}
 
 //---------------------------------------------------------
 
 Assigner *MaterialData::getAssigner()
 {
-  ClassAssigner *ca = new ClassAssigner(name, 2, 0);
+  ClassAssigner *ca = new ClassAssigner(name, 3, 0);
+
+  new ClassStr<MaterialData> (ca, "MaterialName", this, &MaterialData::name);
 
   speciesMap.setup("Species");
 
@@ -442,6 +450,10 @@ Assigner *MaterialData::getAssigner()
 RegionalIcData::RegionalIcData()
 {
   custom_geometry_specifier = "";
+
+  atomic_frequency = 0.0; 
+  mean_displacement_x = mean_displacement_y = mean_displacement_z = 0.0;
+  mean_momentum_x     = mean_momentum_y     = mean_momentum_z     = 0.0;
 }
 
 //---------------------------------------------------------
@@ -449,7 +461,7 @@ RegionalIcData::RegionalIcData()
 Assigner *RegionalIcData::getAssigner()
 {
 
-  ClassAssigner *ca = new ClassAssigner(name, 8, 0);
+  ClassAssigner *ca = new ClassAssigner(name, 15, 0);
 
   planeMap.setup("Plane", ca);
   sphereMap.setup("Sphere", ca);
@@ -459,6 +471,14 @@ Assigner *RegionalIcData::getAssigner()
   cylindersphereMap.setup("CylinderWithSphericalCaps", ca);
 
   new ClassStr<RegionalIcData> (ca, "GeometrySpecifier", this, &RegionalIcData::custom_geometry_specifier);
+
+  new ClassDouble<SpeciesData> (ca, "AtomicFrequency", this, &SpeciesData::atomic_frequency);
+  new ClassDouble<SpeciesData> (ca, "MeanDisplacementX", this, &SpeciesData::mean_displacement_x);
+  new ClassDouble<SpeciesData> (ca, "MeanDisplacementY", this, &SpeciesData::mean_displacement_y);
+  new ClassDouble<SpeciesData> (ca, "MeanDisplacementZ", this, &SpeciesData::mean_displacement_z);
+  new ClassDouble<SpeciesData> (ca, "MeanMomentumX", this, &SpeciesData::mean_momentum_x);
+  new ClassDouble<SpeciesData> (ca, "MeanMomentumY", this, &SpeciesData::mean_momentum_y);
+  new ClassDouble<SpeciesData> (ca, "MeanMomentumZ", this, &SpeciesData::mean_momentum_z);
 
   speciesMap.setup("Species", ca);
 

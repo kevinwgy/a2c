@@ -64,7 +64,6 @@ add_executable(dmd
 Main.cpp
 IoData.cpp
 Lattice.cpp
-Variables.cpp
 Output.cpp
 Utils.cpp
 boundaryconditions.cpp

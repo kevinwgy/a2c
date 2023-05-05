@@ -181,6 +181,8 @@ struct LatticeData
   double ax, ay, az, bx, by, bz, cx, cy, cz; //!< lattice vectors
   double ox, oy, oz; //!< origin of lattice, i.e. the (x,y,z) coords of site (0,0,0)
    
+  enum Boolean {FALSE = 0, TRUE = 1} a_periodic, b_periodic, c_periodic; //!< whether a, b, c dirs have periodic b.c.
+
   ObjectMap<LatticeSiteData> siteMap;
   
   double dmin; //!< min spacing between sites on this lattice and those on other lattices
@@ -202,13 +204,6 @@ struct SpeciesData
   enum Boolean {FALSE = 0, TRUE = 1} diffusive; 
 
   double molar_fraction; //!< initial value (optional)
-  double atomic_frequency; //!< initial value (optional)
-  double mean_displacement_x; //!< initial value (optional)
-  double mean_displacement_y;
-  double mean_displacement_z;
-  double mean_momentum_x; //!< initial value (optional)
-  double mean_momentum_y;
-  double mean_momentum_z;
   
   double min_molar_fraction; //!< a smaller number to avoid division-by-zero
 
@@ -237,6 +232,9 @@ struct InteratomicPotentialData
 
 struct MaterialData 
 {
+
+  const char* name;
+
   ObjectMap<SpeciesData> speciesMap;
     
   InteratomicPotentialData potential;
@@ -262,6 +260,14 @@ struct RegionalIcData
 
   ObjectMap<SpeciesData> speciesMap;
     
+  double atomic_frequency; //!< initial value (optional)
+  double mean_displacement_x; //!< initial value (optional)
+  double mean_displacement_y;
+  double mean_displacement_z;
+  double mean_momentum_x; //!< initial value (optional)
+  double mean_momentum_y;
+  double mean_momentum_z;
+
   RegionalIcData();
   ~RegionalIcData() {}
 
