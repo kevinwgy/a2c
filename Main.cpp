@@ -67,9 +67,9 @@ int main(int argc, char* argv[])
   //--------------------------------------------------------------
   // Setup materials
   //--------------------------------------------------------------
-  vector<MaterialOperator> mo;
+  vector<MaterialOperator> mato;
   int nMaterials = iod.materialMap.dataMap.size();
-  mo.resize(nMaterials);
+  mato.resize(nMaterials);
   std::set<int> material_tracker; //for error detection only
   for(auto it = iod.materialMap.dataMap.begin(); it != iod.materialMap.dataMap.end(); it++) {
     int matid = it->first;
@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
     }
     material_tracker.insert(matid);
 
-    mo[matid].Setup(matid, it->second);
+    mato[matid].Setup(matid, it->second);
   }
   if(material_tracker.size() != nMaterials) {
     print_error("*** Error: Detected error in the specification of material indices.\n");
@@ -89,9 +89,9 @@ int main(int argc, char* argv[])
   //--------------------------------------------------------------
   // Setup lattice constants
   //--------------------------------------------------------------
-  vector<LatticeInfo> lattice_info;
+  vector<LatticeInfo> linfo;
   int nLattices = iod.latticeMap.dataMap.size();
-  lattice_info.resize(nLattices);
+  linfo.resize(nLattices);
   std::set<int> lattice_tracker; //for error detection only
   for(auto it = iod.latticeMap.dataMap.begin(); it != iod.latticeMap.dataMap.end(); it++) {
     int lattice_id = it->first;
@@ -100,7 +100,7 @@ int main(int argc, char* argv[])
       exit_mpi();
     }
     lattice_tracker.insert(lattice_id);
-    lattice_info[lattice_id].Setup(lattice_id, it->second, nMaterials);
+    linfo[lattice_id].Setup(lattice_id, it->second, nMaterials);
   }
   if(lattice_tracker.size() != nLattices) {
     print_error("*** Error: Detected error in the specification of lattice indices.\n");
@@ -115,9 +115,9 @@ int main(int argc, char* argv[])
   //--------------------------------------------------------------
   // Create the ``specimen''
   //--------------------------------------------------------------
-  vector<LatticeVariables> VS(nLattices);
-  SpaceOperator spo(comm, iod, mo, lattice_info, VS); //also initializes VS
-
+  vector<LatticeVariables> LVS(nLattices);
+  SpaceOperator spo(comm, iod, mato, linfo);
+  spo.SetupLatticeVariables(LVS);
 
   //--------------------------------------------------------------
   // Initialize state: atomic positions, vibration frequencies, H molar fractions

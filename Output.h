@@ -30,14 +30,14 @@ public:
   Output(MPI_Comm &comm_, IoData &iod_);
   ~Output();
   
-  void OutputSolution(double time, double dt, int time_step, std::vector<LatticeVariables> &VS,
+  void OutputSolution(double time, double dt, int time_step, std::vector<LatticeVariables> &LV,
                       bool force_write = false);
 
 private:
 
-  void OutputSolutionVTP(double time, [[maybe_unused]] int time_step, std::vector<LatticeVariables> &VS);
+  void OutputSolutionVTP(double time, [[maybe_unused]] int time_step, std::vector<LatticeVariables> &LV);
   void OutputSolutionOnLatticeVTP(double time, int lattice_id, LatticeVariables &V);
-  void OutputSolutionXYZ(double time, [[maybe_unused]] int time_step, std::vector<LatticeVariables> &VS);
+  void OutputSolutionXYZ(double time, [[maybe_unused]] int time_step, std::vector<LatticeVariables> &LV);
   void OutputSolutionOnLatticeXYZ(double time, int lattice_id, LatticeVariables &V);
 
 };

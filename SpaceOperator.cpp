@@ -1,11 +1,51 @@
-#include <iostream>
-#include <vector>
-#include <math.h>
-#include <Vector3D.h>
-#include <input.h>
-using namespace std;
+#include<SpaceOperator.h>
+#include<LatticeVariables.h>
+#include<Utils.h>
+#include<GeoTools/DistancePointToParallelepiped.h>
+#include<GeoTools/DistancePointToSpheroid.h>
+using std::vector;
 
-void initializeStateVariables(Input &input, vector<vector<Int3> > &SS1, vector<vector<Int3> > &SS2,
+//---------------------------------------------------------------------
+
+SpaceOperator::SpaceOperator(MPI_Comm& comm_, IoData& iod_, vector<MaterialOperator> &mato_,
+                             vector<LatticeInfo> &linfo_) 
+             : iod(iod_), comm(comm_), mato(mato_), linfo(linfo_)
+{
+
+}
+
+//---------------------------------------------------------------------
+
+SpaceOperator::~SpaceOperator()
+{ }
+
+//---------------------------------------------------------------------
+
+void 
+SpaceOperator::SetupLatticeVariables(vector<LatticeVariables> &LVS)
+{
+  CreateSpecimen(LVS); //!< initializes LVS.
+
+
+}
+
+//---------------------------------------------------------------------
+
+void
+SpaceOperator::CreateSpecimen(vector<LatticeVariables> &LVS)
+{
+  
+
+
+
+}
+
+//---------------------------------------------------------------------
+
+
+//---------------------------------------------------------------------
+
+initializeStateVariables(Input &input, vector<vector<Int3> > &SS1, vector<vector<Int3> > &SS2,
                               vector<Vec3D> &q_Pd0, vector<Vec3D> &q_H0, vector<double> &sigma_Pd0,
                               vector<double> &sigma_H0, vector<double> &x0, vector<double> &gamma, 
                               vector<int> &PdSubsurf, vector<int> &HSubsurf, 
