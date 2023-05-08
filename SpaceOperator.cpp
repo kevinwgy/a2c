@@ -3,6 +3,7 @@
 #include<Utils.h>
 #include<GeoTools/DistancePointToParallelepiped.h>
 #include<GeoTools/DistancePointToSpheroid.h>
+#include<GeoTools/BoundingBoxes.h>
 using std::vector;
 
 //---------------------------------------------------------------------
@@ -40,14 +41,162 @@ SpaceOperator::SetupLatticeVariables(vector<LatticeVariables> &LVS)
 //---------------------------------------------------------------------
 
 void
-SpaceOperator::CreateSpecimen(vector<LatticeVariables> &LV, LatticeStructure &lat, LatticeData &iod_lattice)
+SpaceOperator::CreateOneLattice(vector<LatticeVariables> &LV, LatticeStructure &lat, LatticeData &iod_lat)
 {
 
-  // First, find a bounding box in terms of ijk and xyz
-   
+  //----------------------------------------------------------------
+  // Step 0: Get lattice structure info
+  //----------------------------------------------------------------
+  int lattice_id = lat.GetLatticeID();
+  Vec3D O = lat.GetLatticeOrigin();
+  Vec3D dirabc[3];
+  for(int i=0; i<3; i++)
+    dirabc[i] = lat.GetLatticeDirection(i);
+
+
+  //----------------------------------------------------------------
+  // Step 1: Find a bounding box in terms of lattice coordinates
+  //----------------------------------------------------------------
+  Vec3D lmin(DBL_MAX), lmax(-DBL_MAX), lmin_local, lmax_local;
+
+  // Go over cylinder-cones
+  for(auto it = iod_lat.cylinderconeMap.dataMap.begin(); it != iod_lat.cylinderconeMap.dataMap.end(); it++) {
+    if(it->second.inclusion == CylinderConeData::EXTERIOR)
+      continue;
+    
+    Vec3D x0(it->second->cen_x, it->second->cen_y, it->second->cen_z);
+    Vec3D dir(it->second->nx, it->second->ny, it->second->nz);
+    dir /= dir.norm();
+    
+    double L = it->second->L; //cylinder height
+    double R = it->second->r; //cylinder radius
+    double tan_alpha = tan(it->second->opening_angle_degrees/180.0*acos(-1.0));//opening angle
+    double Hmax = R/tan_alpha;
+    double H = std::min(it->second->cone_height, Hmax); //cone's height
+    
+    GeoTools::GetBoundingBoxOfCylinderCone(x0, dir, R, L, H, O, dirabc[0], dirabc[1], dirabc[2],
+                                           lmin_local, lmax_local, true); //dir have been normalized.
+
+    for(int i=0; i<3; i++) {
+      if(lmin_local[i] < lmin[i])
+        lmin[i] = lmin_local[i]; 
+      if(lmax_local[i] > lmax[i])
+        lmax[i] = lmax_local[i];
+    }
+  }
+
+  // Go over cylinder-spheres (i.e. possibly with end cap(s))
+  for(auto it = iod_lat.cylindersphereMap.dataMap.begin(); it != iod_lat.cylindersphereMap.dataMap.end(); it++) {
+    if(it->second.inclusion == CylinderSphereData::EXTERIOR)
+      continue;
+
+    Vec3D x0(it->second->cen_x, it->second->cen_y, it->second->cen_z);
+    Vec3D dir(it->second->nx, it->second->ny, it->second->nz);
+    dir /= dir.norm();
+
+    double L = it->second->L; //cylinder height
+    double R = it->second->r; //cylinder & sphere's radius
+    bool front_cap = (it->second->front_cap == CylinderSphereData::On);
+    bool back_cap = (it->second->back_cap == CylinderSphereData::On);
+
+    GeoTools::GetBoundingBoxOfCylinderSphere(x0, dir, R, L, front_cap, back_cap, O, dirabc[0], dirabc[1],
+                                             dirabc[2], lmin_local, lmax_local, true); //dir normalized
+
+    for(int i=0; i<3; i++) {
+      if(lmin_local[i] < lmin[i])
+        lmin[i] = lmin_local[i]; 
+      if(lmax_local[i] > lmax[i])
+        lmax[i] = lmax_local[i];
+    }
+  }
+
+  // Go over spheres
+  for(auto it = iod_lat.sphereMap.dataMap.begin(); it != iod_lat.sphereMap.dataMap.end(); it++) {
+    if(it->second->inclusion == SphereData::EXTERIOR)
+      continue;
+
+    Vec3D x0(it->second->cen_x, it->second->cen_y, it->second->cen_z);
+    double R = it->second->radius;
+
+    GeoTools::GetBoundingBoxOfSphere(x0, R, O, dirabc[0], dirabc[1], dirabc[2],
+                                     lmin_local, lmax_local, true); //dir normalized
+
+    for(int i=0; i<3; i++) {
+      if(lmin_local[i] < lmin[i])
+        lmin[i] = lmin_local[i]; 
+      if(lmax_local[i] > lmax[i])
+        lmax[i] = lmax_local[i];
+    }
+  }
+
+  // Go over parallelepipeds
+  for(auto it = iod_lat.parallelepipedMap.dataMap.begin(); 
+           it != iod_lat.parallelepipedMap.dataMap.end(); it++) {
+    if(it->second->inclusion == ParallelepipedData::EXTERIOR)
+      continue;
+
+    Vec3D x0(it->second->x0, it->second->y0, it->second->z0);
+    Vec3D oa(it->second->ax, it->second->ay, it->second->az);  oa -= x0;
+    Vec3D ob(it->second->bx, it->second->by, it->second->bz);  ob -= x0;
+    Vec3D oc(it->second->cx, it->second->cy, it->second->cz);  oc -= x0;
+
+    if(oa.norm()==0 || ob.norm()==0 || oc.norm()==0 || (oa^ob)*oc<=0.0) {
+      print_error("*** Error: Detected error in a user-specified parallelepiped. "
+                  "Overlapping vertices or violation of right-hand rule.\n");
+      exit_mpi();
+    }
+
+    GeoTools::GetBoundingBoxOfParallelepiped(x0, oa, ob, oc, O, dirabc[0], dirabc[1], dirabc[2],
+                                             lmin_local, lmax_local, true); //dir normalized
+
+    for(int i=0; i<3; i++) {
+      if(lmin_local[i] < lmin[i])
+        lmin[i] = lmin_local[i];
+      if(lmax_local[i] > lmax[i])
+        lmax[i] = lmax_local[i];
+    }
+  }
+
+  // Go over spheroids
+  for(auto it = iod_lat.spheroidMap.dataMap.begin(); it != iod_lat.spheroidMap.dataMap.end(); it++) {
+    if(it->second->inclusion == SpheroidData::EXTERIOR)
+      continue;
+
+    Vec3D x0(it->second->cen_x, it->second->cen_y, it->second->cen_z);
+    Vec3D axis(it->second->axis_x, it->second->axis_y, it->second->axis_z);
+    double semi_length = it->second->semi_length;
+    double r = it->second->radius;
+
+    GeoTools::GetBoundingBoxOfSpheroid(x0, axis, it->second->semi_length, it->second->radius, O,
+                                       dirabc[0], dirabc[1], dirabc[2], lmin_local, lmax_local, true);
+
+    for(int i=0; i<3; i++) {
+      if(lmin_local[i] < lmin[i])
+        lmin[i] = lmin_local[i];
+      if(lmax_local[i] > lmax[i])
+        lmax[i] = lmax_local[i];
+    }
+  }
+
+  if(lmin[0]>=lmax[0] || lmin[1]>=lmax[1] || lmin[2]>=lmax[2]) {
+    print_error("*** Error: Unable to find a bounding box for lattice domain [%d]. Domain is unbounded.\n",
+                lattice_id);
+    exit_mpi();
+  }
+
+
+  //----------------------------------------------------------------
+  // Step 2: Create lattice sites (l, q), siteid, and matid
+  //----------------------------------------------------------------
+  I AM HERE 
+
+
 
 
 }
+
+//---------------------------------------------------------------------
+
 
 //---------------------------------------------------------------------
 

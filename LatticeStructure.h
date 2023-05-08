@@ -3,6 +3,7 @@
 #include<Vector3D.h>
 #include<vector>
 #include<cassert>
+#include<cmath>
 struct LatticeData;
 
 /****************************************************************
@@ -37,21 +38,24 @@ public:
 
   void Setup(int lattice_id_, LatticeData &iod_lattice, int nMaterials);
 
+  inline int GetLatticeID() {return lattice_id;}
+  inline Vec3D GetLatticeOrigin() {return o;}
   inline Vec3D GetLatticeVector(int p) {assert(p>=0 && p<=2); return abc[p];}
   inline Vec3D GetLatticeDirection(int p) {assert(p>=0 && p<=2); return dirabc[p];}
   inline double GetLatticeSpacing(int p) {assert(p>=0 && p<=2); return abc0[p];}
   inline double GetLatticeAngle(int p) {assert(p>=0 && p<=2); return alpha_beta_gamma[p];}
   inline double GetUnitCellVolume() {return vol;}
 
-  //! functions that switch from (x,y,z) and (i,j,k) coords
-  inline Vec3D GetXYZ(double i, double j, double k) {return i*abc[0]+j*abc[1]+k*abc[2];}
-  inline Vec3D GetXYZ(Vec3D& ijk) {return GetXYZ(ijk[0], ijk[1], ijk[2]);}
-  inline Vec3D GetIJK(Vec3D& xyz) {
-    Vec3D ijk; for(int p=0; p<3; p++) ijk[p] = xyz*dirabc[p]/abc0[p]; return ijk;}
-  inline Vec3D GetIJK(double x, double y, double z) {Vec3D xyz(x,y,z); return GetIJK(xyz);}
+  //! functions that switch from (x,y,z) and (la,lb,lc) coords
+  inline Vec3D GetXYZ(double la, double lb, double lc) {return la*abc[0]+lb*abc[1]+lc*abc[2];}
+  inline Vec3D GetXYZ(Vec3D& labc) {return GetXYZ(labc[0], labc[1], labc[2]);}
+  inline Vec3D GetLABC(Vec3D& xyz) {
+    Vec3D labc; for(int p=0; p<3; p++) labc[p] = xyz*dirabc[p]/abc0[p]; return labc;}
+  inline Vec3D GetLABC(double x, double y, double z) {Vec3D xyz(x,y,z); return GetLABC(xyz);}
 
   //! Get cell id & local lattice coords
-  inline 
+  Vec3D GetLocalCoordsFromXYZ(Vec3D &xyz, Int3 *ijk = NULL); 
+  Vec3D GetLocalCoordsFromLABC(Vec3D &labc, Int3 *ijk = NULL);
 
 }
 

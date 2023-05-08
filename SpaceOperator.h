@@ -30,7 +30,7 @@ public:
 
 private:
 
-  void CreateOneLattice(LatticeVariables &LV, LatticeStructure &lat, LatticeData &iod_lattice); 
+  void CreateOneLattice(LatticeVariables &LV, LatticeStructure &lat, LatticeData &iod_lat); 
 
 
 };

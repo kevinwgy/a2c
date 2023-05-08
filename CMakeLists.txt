@@ -77,6 +77,7 @@ neighbors.cpp
 potential.cpp
 quadrature.cpp
 readresults.cpp
+GeoTools/BoundingBoxes.cpp
 GeoTools/GeoTools.cpp
 )
 

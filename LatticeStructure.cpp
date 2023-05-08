@@ -53,6 +53,8 @@ LatticeStructure::Setup(int lattice_id_, LatticeData &iod_lattice, int nMaterial
   vol = fabs(abc[0]*(abc[1]^abc[2]));
   
   dmin = iod_lattice.dmin;
+  if(dmin<=0.0) //user did not specify dmin. Set it to the min lattice spacing constant 
+    dmin = std::min(abc0[0], std::min(abc0[1], abc0[2]));
 
   a_periodic = (iod_lattice.a_periodic == LatticeData::TRUE);
   b_periodic = (iod_lattice.b_periodic == LatticeData::TRUE);
@@ -93,6 +95,43 @@ LatticeStructure::Setup(int lattice_id_, LatticeData &iod_lattice, int nMaterial
     }
   }
 
+}
+
+//-------------------------------------------------------------------------
+
+Vec3D
+LatticeStructure::GetLocalCoordsFromXYZ(Vec3D &xyz, Int3 *ijk)
+{
+  Vec3D labc = GetLABC(xyz);
+  if(ijk) {
+    for(int p=0; p<3; p++) {
+      ijk[p] = floor(labc[p]);
+      labc[p] -= ijk[p];
+    }
+  } else {
+    for(int p=0; p<3; p++)
+      labc[p] -= floor(labc[p]);
+  }
+  return labc;
+}
+
+//-------------------------------------------------------------------------
+
+Vec3D
+LatticeStructure::GetLocalCoordsFromLABC(Vec3D &labc, Int3 *ijk)
+{
+  Vec3D labc0;
+  if(ijk) {
+    for(int p=0; p<3; p++) {
+      ijk[p] = floor(labc[p]);
+      labc0[p] = labc[p] - ijk[p];
+    }
+  }
+  else { 
+    for(int p=0; p<3; p++)
+      labc0[p] = labc[p] - floor(labc[p]);
+  }   
+  return labc0;
 }
 
 //-------------------------------------------------------------------------
