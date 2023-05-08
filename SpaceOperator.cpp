@@ -8,8 +8,8 @@ using std::vector;
 //---------------------------------------------------------------------
 
 SpaceOperator::SpaceOperator(MPI_Comm& comm_, IoData& iod_, vector<MaterialOperator> &mato_,
-                             vector<LatticeInfo> &linfo_) 
-             : iod(iod_), comm(comm_), mato(mato_), linfo(linfo_)
+                             vector<LatticeStructure> &lats_) 
+             : iod(iod_), comm(comm_), mato(mato_), lats(lats_)
 {
 
 }
@@ -24,18 +24,27 @@ SpaceOperator::~SpaceOperator()
 void 
 SpaceOperator::SetupLatticeVariables(vector<LatticeVariables> &LVS)
 {
-  CreateSpecimen(LVS); //!< initializes LVS.
 
+  int nLattices = iod.latticeMap.dataMap.size();
+  if(LVS.size() != nLattices)
+    LVS.resize(nLattices);
+
+  for(auto&& l : iod.latticeMap.dataMap) {
+    int lid = l.first; //lattice id
+    assert(lid>=0 && lid<nLattices);
+    CreateOneLattice(LVS[lid], lats[lid], l.second); 
+  }
 
 }
 
 //---------------------------------------------------------------------
 
 void
-SpaceOperator::CreateSpecimen(vector<LatticeVariables> &LVS)
+SpaceOperator::CreateSpecimen(vector<LatticeVariables> &LV, LatticeStructure &lat, LatticeData &iod_lattice)
 {
-  
 
+  // First, find a bounding box in terms of ijk and xyz
+   
 
 
 }

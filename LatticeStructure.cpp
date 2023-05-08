@@ -1,4 +1,4 @@
-#include <LatticeInfo.h>
+#include <LatticeStructure.h>
 #include <IoData.h>
 #include <Utils.h>
 #include <iostream>
@@ -7,20 +7,20 @@ using std::vector;
 
 //-------------------------------------------------------------------------
 
-LatticeInfo::LatticeInfo() : lattice_id(-1)
+LatticeStructure::LatticeStructure() : lattice_id(-1)
 { 
   //nothing is done here. must call function "Setup" to setup.
 }
 
 //-------------------------------------------------------------------------
 
-LatticeInfo::~LatticeInfo()
+LatticeStructure::~LatticeStructure()
 { }
 
 //-------------------------------------------------------------------------
 
 void
-LatticeInfo::Setup(int lattice_id_, LatticeData &iod_lattice, int nMaterials)
+LatticeStructure::Setup(int lattice_id_, LatticeData &iod_lattice, int nMaterials)
 {
   lattice_id = lattice_id_;
 
@@ -40,20 +40,15 @@ LatticeInfo::Setup(int lattice_id_, LatticeData &iod_lattice, int nMaterials)
   o[1] = iod_lattice.oy;
   o[2] = iod_lattice.oz;
 
-  a0 = abc[0].norm();
-  assert(a0>0.0);
-  b0 = abc[1].norm();
-  assert(b0>0.0);
-  c0 = abc[2].norm();
-  assert(c0>0.0);
+  for(int p=0; p<3; p++) {
+    abc0[p] = abc[p].norm();
+    assert(abc0[p]>0.0);
+    dirabc[p] = abc[p]/abc0[p];
+  }
 
-  dirabc[0] = abc[0]/a0;
-  dirabc[1] = abc[1]/b0;
-  dirabc[2] = abc[2]/c0;
-
-  alpha = acos(dirabc[1]*dirabc[2]);
-  beta  = acos(dirabc[0]*dirabc[2]);
-  gamma = acos(dirabc[0]*dirabc[1]);
+  alpha_beta_gamma[0] = acos(dirabc[1]*dirabc[2]);
+  alpha_beta_gamma[1] = acos(dirabc[0]*dirabc[2]);
+  alpha_beta_gamma[2] = acos(dirabc[0]*dirabc[1]);
 
   vol = fabs(abc[0]*(abc[1]^abc[2]));
   

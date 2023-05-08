@@ -2,7 +2,7 @@
 #define _SPACE_OPERATOR_H_
 
 #include<IoData.h>
-#include<LatticeInfo.h>
+#include<LatticeStructure.h>
 #include<MaterialOperator.h>
 #include<mpi.h>
 class LatticeVariables;
@@ -17,20 +17,20 @@ class SpaceOperator {
   MPI_Comm& comm;
 
   std::vector<MaterialOperator>& mato;
-  std::vector<LatticeInfo>& linfo;
+  std::vector<LatticeStructure>& lats;
 
 
 public:
 
   SpaceOperator(MPI_Comm& comm_, IoData& iod_, std::vector<MaterialOperator> &mato_,
-                std::vector<LatticeInfo> &linfo_);
+                std::vector<LatticeStructure> &lats_);
   ~SpaceOperator();
 
   void SetupLatticeVariables(std::vector<LatticeVariables> &LVS);
 
 private:
 
-  void CreateSpecimen(std::vector<LatticeVariables> &LVS); //!< initializes "q"
+  void CreateOneLattice(LatticeVariables &LV, LatticeStructure &lat, LatticeData &iod_lattice); 
 
 
 };

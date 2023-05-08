@@ -63,7 +63,7 @@ add_custom_target(
 add_executable(a2c
 Main.cpp
 IoData.cpp
-LatticeInfo.cpp
+LatticeStructure.cpp
 Output.cpp
 Utils.cpp
 MaterialOperator.cpp

@@ -185,7 +185,7 @@ struct LatticeData
 
   ObjectMap<LatticeSiteData> siteMap;
   
-  double dmin; //!< min spacing between sites on this lattice and those on other lattices
+  double dmin; //!< min spacing between sites on this lattice and any other lattice 
 
   LatticeData();
   ~LatticeData() {}

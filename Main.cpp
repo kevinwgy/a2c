@@ -4,16 +4,8 @@
  *     are permitted, provided that this copyright notice is retained.
  * (2) Use at your own risk.
  **********************************************************************************/
-#include <stdio.h>
-#include <iostream>
-#include <vector>
-#include <time.h>
-#include <mpi.h>
-#include <math.h>
-#include <Shells.h>
-#include <IoData.h>
 #include <Output.h>
-#include <minimizer.h>
+#include <SpaceOperator.h>
 #include <Utils.h>
 using std::vector;
 
@@ -89,9 +81,9 @@ int main(int argc, char* argv[])
   //--------------------------------------------------------------
   // Setup lattice constants
   //--------------------------------------------------------------
-  vector<LatticeInfo> linfo;
+  vector<LatticeStructure> lats;
   int nLattices = iod.latticeMap.dataMap.size();
-  linfo.resize(nLattices);
+  lats.resize(nLattices);
   std::set<int> lattice_tracker; //for error detection only
   for(auto it = iod.latticeMap.dataMap.begin(); it != iod.latticeMap.dataMap.end(); it++) {
     int lattice_id = it->first;
@@ -100,7 +92,7 @@ int main(int argc, char* argv[])
       exit_mpi();
     }
     lattice_tracker.insert(lattice_id);
-    linfo[lattice_id].Setup(lattice_id, it->second, nMaterials);
+    lats[lattice_id].Setup(lattice_id, it->second, nMaterials);
   }
   if(lattice_tracker.size() != nLattices) {
     print_error("*** Error: Detected error in the specification of lattice indices.\n");
@@ -116,7 +108,7 @@ int main(int argc, char* argv[])
   // Create the ``specimen''
   //--------------------------------------------------------------
   vector<LatticeVariables> LVS(nLattices);
-  SpaceOperator spo(comm, iod, mato, linfo);
+  SpaceOperator spo(comm, iod, mato, lats);
   spo.SetupLatticeVariables(LVS);
 
   //--------------------------------------------------------------
