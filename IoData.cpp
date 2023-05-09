@@ -15,6 +15,7 @@ PlaneData::PlaneData()
 
   inclusion = OVERRIDE;
 
+  order = 0;
 }
 
 //------------------------------------------------------------------------------
@@ -22,7 +23,7 @@ PlaneData::PlaneData()
 Assigner *PlaneData::getAssigner()
 {
 
-  ClassAssigner *ca = new ClassAssigner("normal", 8, nullAssigner);
+  ClassAssigner *ca = new ClassAssigner("normal", 9, nullAssigner);
 
   new ClassDouble<PlaneData> (ca, "Point_x", this, &PlaneData::cen_x);
   new ClassDouble<PlaneData> (ca, "Point_y", this, &PlaneData::cen_y);
@@ -36,6 +37,8 @@ Assigner *PlaneData::getAssigner()
   new ClassToken<PlaneData> (ca, "Inclusion", this,
      reinterpret_cast<int PlaneData::*>(&PlaneData::inclusion), 3,
      "Override", 0, "Intersection", 1, "Union", 2);
+
+  new ClassInt<PlaneData>(ca, "OperationOrder", this, &PlaneData::order);
 
   return ca;
 }
@@ -52,6 +55,8 @@ SphereData::SphereData()
 
   side = INTERIOR;
   inclusion = OVERRIDE;
+
+  order = 0;
 }
 
 //------------------------------------------------------------------------------
@@ -59,7 +64,7 @@ SphereData::SphereData()
 Assigner *SphereData::getAssigner()
 {
   
-  ClassAssigner *ca = new ClassAssigner("normal", 7, nullAssigner);
+  ClassAssigner *ca = new ClassAssigner("normal", 8, nullAssigner);
   
   new ClassDouble<SphereData> (ca, "Center_x", this, &SphereData::cen_x);
   new ClassDouble<SphereData> (ca, "Center_y", this, &SphereData::cen_y);
@@ -73,6 +78,8 @@ Assigner *SphereData::getAssigner()
   new ClassToken<SphereData> (ca, "Inclusion", this,
      reinterpret_cast<int SphereData::*>(&SphereData::inclusion), 3,
      "Override", 0, "Intersection", 1, "Union", 2);
+
+  new ClassInt<SphereData>(ca, "OperationOrder", this, &SphereData::order);
 
   initialConditions.setup("InitialState", ca);
   
@@ -92,6 +99,7 @@ ParallelepipedData::ParallelepipedData()
   side = INTERIOR;
   inclusion = OVERRIDE;
 
+  order = 0;
 }
 
 //------------------------------------------------------------------------------
@@ -99,7 +107,7 @@ ParallelepipedData::ParallelepipedData()
 Assigner *ParallelepipedData::getAssigner()
 {
 
-  ClassAssigner *ca = new ClassAssigner("normal", 15, nullAssigner);
+  ClassAssigner *ca = new ClassAssigner("normal", 16, nullAssigner);
 
   new ClassDouble<ParallelepipedData> (ca, "X0", this, &ParallelepipedData::x0);
   new ClassDouble<ParallelepipedData> (ca, "Y0", this, &ParallelepipedData::y0);
@@ -125,6 +133,8 @@ Assigner *ParallelepipedData::getAssigner()
      reinterpret_cast<int ParallelepipedData::*>(&ParallelepipedData::inclusion), 3,
      "Override", 0, "Intersection", 1, "Union", 2);
 
+  new ClassInt<ParallelepipedData>(ca, "OperationOrder", this, &ParallelepipedData::order);
+
   initialConditions.setup("InitialState", ca);
 
   return ca;
@@ -148,6 +158,8 @@ SpheroidData::SpheroidData()
 
   side = INTERIOR;
   inclusion = OVERRIDE;
+
+  order = 0;
 }
 
 //------------------------------------------------------------------------------
@@ -155,7 +167,7 @@ SpheroidData::SpheroidData()
 Assigner *SpheroidData::getAssigner()
 {
 
-  ClassAssigner *ca = new ClassAssigner("normal", 11, nullAssigner);
+  ClassAssigner *ca = new ClassAssigner("normal", 12, nullAssigner);
 
   new ClassDouble<SpheroidData> (ca, "Center_x", this, &SpheroidData::cen_x);
   new ClassDouble<SpheroidData> (ca, "Center_y", this, &SpheroidData::cen_y);
@@ -173,6 +185,8 @@ Assigner *SpheroidData::getAssigner()
   new ClassToken<SpheroidData> (ca, "Inclusion", this,
      reinterpret_cast<int SpheroidData::*>(&SpheroidData::inclusion), 3,
      "Override", 0, "Intersection", 1, "Union", 2);
+
+  new ClassInt<SpheroidData>(ca, "OperationOrder", this, &SpheroidData::order);
 
   initialConditions.setup("InitialState", ca);
 
@@ -198,13 +212,15 @@ CylinderConeData::CylinderConeData() {
 
   side = INTERIOR;
   inclusion = OVERRIDE;
+
+  order = 0;
 }
 
 //------------------------------------------------------------------------------
 
 Assigner *CylinderConeData::getAssigner()
 {
-  ClassAssigner *ca = new ClassAssigner("normal", 13, nullAssigner);
+  ClassAssigner *ca = new ClassAssigner("normal", 14, nullAssigner);
 
   new ClassDouble<CylinderConeData> (ca, "Axis_x", this, &CylinderConeData::nx);
   new ClassDouble<CylinderConeData> (ca, "Axis_y", this, &CylinderConeData::ny);
@@ -225,6 +241,8 @@ Assigner *CylinderConeData::getAssigner()
   new ClassToken<CylinderConeData> (ca, "Inclusion", this,
      reinterpret_cast<int CylinderConeData::*>(&CylinderConeData::inclusion), 3,
      "Override", 0, "Intersection", 1, "Union", 2);
+
+  new ClassInt<CylinderConeData>(ca, "OperationOrder", this, &CylinderConeData::order);
 
   initialConditions.setup("InitialState", ca);
 
@@ -250,13 +268,15 @@ CylinderSphereData::CylinderSphereData() {
 
   side = INTERIOR;
   inclusion = OVERRIDE;
+
+  order = 0;
 }
 
 //------------------------------------------------------------------------------
 
 Assigner *CylinderSphereData::getAssigner()
 {
-  ClassAssigner *ca = new ClassAssigner("normal", 13, nullAssigner);
+  ClassAssigner *ca = new ClassAssigner("normal", 14, nullAssigner);
 
   new ClassDouble<CylinderSphereData> (ca, "Axis_x", this, &CylinderSphereData::nx);
   new ClassDouble<CylinderSphereData> (ca, "Axis_y", this, &CylinderSphereData::ny);
@@ -281,9 +301,39 @@ Assigner *CylinderSphereData::getAssigner()
      reinterpret_cast<int CylinderSphereData::*>(&CylinderSphereData::inclusion), 3,
      "Override", 0, "Intersection", 1, "Union", 2);
 
+  new ClassInt<CylinderSphereData>(ca, "OperationOrder", this, &CylinderSphereData::order);
+
   initialConditions.setup("InitialState", ca);
 
   return ca;
+}
+
+//---------------------------------------------------------
+
+CustomGeometryData::CustomGeometryData()
+{
+  specifier = "";
+
+  inclusion = OVERRIDE;
+
+  order = 0;
+}
+
+//---------------------------------------------------------
+
+void CustomGeometryData::setup(const char *name)
+{
+  ClassAssigner *ca = new ClassAssigner(name, 4, 0);
+
+  new ClassStr<CustomGeometryData> (ca, "GeometrySpecifier", this, &CustomGeometryData::specifier);
+
+  new ClassToken<CustomGeometryData> (ca, "Inclusion", this,
+     reinterpret_cast<int CustomGeometryData::*>(&CustomGeometryData::inclusion), 3,
+     "Override", 0, "Intersection", 1, "Union", 2);
+
+  new ClassInt<CustomGeometryData>(ca, "OperationOrder", this, &CustomGeometryData::order);
+
+  initialConditions.setup("InitialState", ca);
 }
 
 //---------------------------------------------------------
@@ -310,8 +360,6 @@ Assigner *LatticeSiteData::getAssigner()
 
 LatticeData::LatticeData()
 {
-  custom_geometry_specifier = "";
-
   ax = 1.0; ay = 0.0; az = 0.0;
   bx = 0.0; by = 1.0; bz = 0.0;
   cx = 0.0; cy = 0.0; cz = 1.0;
@@ -326,7 +374,7 @@ LatticeData::LatticeData()
 
 //---------------------------------------------------------
 
-void LatticeData::setup(const char *name)
+Assigner *LatticeData::getAssigner()
 {
 
   ClassAssigner *ca = new ClassAssigner(name, 24, 0);
@@ -338,7 +386,7 @@ void LatticeData::setup(const char *name)
   cylinderconeMap.setup("CylinderAndCone", ca);
   cylindersphereMap.setup("CylinderWithSphericalCaps", ca);
 
-  new ClassStr<LatticeData> (ca, "GeometrySpecifier", this, &LatticeData::custom_geometry_specifier);
+  custom_geometry.setup("CustomGeometry", ca);
 
   new ClassDouble<LatticeData> (ca, "OAx", this, &LatticeData::ax);
   new ClassDouble<LatticeData> (ca, "OAy", this, &LatticeData::ay);
@@ -354,13 +402,13 @@ void LatticeData::setup(const char *name)
   new ClassDouble<LatticeData> (ca, "Oy", this, &LatticeData::oy);
   new ClassDouble<LatticeData> (ca, "Oz", this, &LatticeData::oz);
   
-  new ClassToken<LatticeData>(ca, "PeriodicAlongOA", this,
+  new ClassToken<LatticeData>(ca, "PeriodicOA", this,
                               reinterpret_cast<int LatticeData::*>(&LatticeData::a_periodic), 2,
                               "False", 0, "True", 1);
-  new ClassToken<LatticeData>(ca, "PeriodicAlongOB", this,
+  new ClassToken<LatticeData>(ca, "PeriodicOB", this,
                               reinterpret_cast<int LatticeData::*>(&LatticeData::b_periodic), 2,
                               "False", 0, "True", 1);
-  new ClassToken<LatticeData>(ca, "PeriodicAlongOC", this,
+  new ClassToken<LatticeData>(ca, "PeriodicOC", this,
                               reinterpret_cast<int LatticeData::*>(&LatticeData::c_periodic), 2,
                               "False", 0, "True", 1);
 
@@ -440,7 +488,7 @@ Assigner *MaterialData::getAssigner()
 
   new ClassStr<MaterialData> (ca, "MaterialName", this, &MaterialData::name);
 
-  speciesMap.setup("Species");
+  speciesMap.setup("Species", ca);
 
   potential.setup("InteratomicPotential");
 }
@@ -449,8 +497,6 @@ Assigner *MaterialData::getAssigner()
 
 RegionalIcData::RegionalIcData()
 {
-  custom_geometry_specifier = "";
-
   atomic_frequency = 0.0; 
   mean_displacement_x = mean_displacement_y = mean_displacement_z = 0.0;
   mean_momentum_x     = mean_momentum_y     = mean_momentum_z     = 0.0;
@@ -470,7 +516,7 @@ Assigner *RegionalIcData::getAssigner()
   cylinderconeMap.setup("CylinderAndCone", ca);
   cylindersphereMap.setup("CylinderWithSphericalCaps", ca);
 
-  new ClassStr<RegionalIcData> (ca, "GeometrySpecifier", this, &RegionalIcData::custom_geometry_specifier);
+  custom_geometry.setup("CustomGeometry", ca);
 
   new ClassDouble<SpeciesData> (ca, "AtomicFrequency", this, &SpeciesData::atomic_frequency);
   new ClassDouble<SpeciesData> (ca, "MeanDisplacementX", this, &SpeciesData::mean_displacement_x);

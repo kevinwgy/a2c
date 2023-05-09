@@ -4,6 +4,7 @@
 #include<IoData.h>
 #include<LatticeStructure.h>
 #include<MaterialOperator.h>
+#include<utility> //std::pair
 #include<mpi.h>
 class LatticeVariables;
 
@@ -30,9 +31,17 @@ public:
 
 private:
 
-  void CreateOneLattice(LatticeVariables &LV, LatticeStructure &lat, LatticeData &iod_lat); 
+  //! Initializes lattice variables (LV)
+  void CreateOneLattice(LatticeStructure &lat, LatticeData &iod_lat, LatticeVariables &LV); 
 
+  //! Check if sites in a lattice site (li,lj,lk) are inside domain. If yes, add to LV.
+  int CheckAndAddSitesInCell(int li, int lj, int lk, LatticeStructure &lat, LatticeData &iod_lat, 
+                             std::vector<std::pair<int,int> > &order, LatticeVariables &LV);
 
+  //! Finds the order of set operations for user-specified geometries (spheres, cylinders, etc.)
+  void FindUserSpecifiedGeometryOrder(int lattice_id, LatticeData &iod_lat, 
+                                      std::vector<std::pair<int,int> > &order);
+  
 };
 
 #endif

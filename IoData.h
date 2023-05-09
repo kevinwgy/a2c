@@ -45,6 +45,8 @@ struct PlaneData {
 
   enum Inclusion {OVERRIDE = 0, INTERSECTION = 1, UNION = 2} inclusion;
 
+  int order; //!< set operation order (0, 1, ...)
+
   StateVariable initialConditions;
 
   PlaneData();
@@ -62,6 +64,8 @@ struct ParallelepipedData {
   double ax, ay, az; //!< axis 1 and its length
   double bx, by, bz; //!< axis 2 and its length
   double cx, cy, cz; //!< axis 3 and its length
+
+  int order; //!< set operation order (0, 1, ...)
 
   enum InteriorOrExterior {INTERIOR = 0, EXTERIOR = 1} side;
   enum Inclusion {OVERRIDE = 0, INTERSECTION = 1, UNION = 2} inclusion;
@@ -83,6 +87,8 @@ struct SphereData {
   enum InteriorOrExterior {INTERIOR = 0, EXTERIOR = 1} side;
   enum Inclusion {OVERRIDE = 0, INTERSECTION = 1, UNION = 2} inclusion;
 
+  int order; //!< set operation order (0, 1, ...)
+
   StateVariable initialConditions;
 
   SphereData();
@@ -103,6 +109,8 @@ struct SpheroidData {
   enum InteriorOrExterior {INTERIOR = 0, EXTERIOR = 1} side;
   enum Inclusion {OVERRIDE = 0, INTERSECTION = 1, UNION = 2} inclusion;
 
+  int order; //!< set operation order (0, 1, ...)
+
   StateVariable initialConditions;
 
   SpheroidData();
@@ -122,6 +130,8 @@ struct CylinderConeData {
 
   enum InteriorOrExterior {INTERIOR = 0, EXTERIOR = 1} side;
   enum Inclusion {OVERRIDE = 0, INTERSECTION = 1, UNION = 2} inclusion;
+
+  int order; //!< set operation order (0, 1, ...)
 
   StateVariable initialConditions;
 
@@ -144,11 +154,32 @@ struct CylinderSphereData {
   enum InteriorOrExterior {INTERIOR = 0, EXTERIOR = 1} side;
   enum Inclusion {OVERRIDE = 0, INTERSECTION = 1, UNION = 2} inclusion;
 
+  int order; //!< set operation order (0, 1, ...)
+
   StateVariable initialConditions;
 
   CylinderSphereData();
   ~CylinderSphereData() {}
   Assigner *getAssigner();
+
+};
+
+//------------------------------------------------------------------------------
+
+struct CustomGeometryData {
+
+  const char *specifier;
+
+  enum Inclusion {OVERRIDE = 0, INTERSECTION = 1, UNION = 2} inclusion;
+
+  int order; //!< set operation order (0, 1, ...)
+
+  StateVariable initialConditions;
+
+  CustomGeometryData();
+  ~CustomGeometryData() {}
+
+  void setup(const char *, ClassAssigner *);
 
 };
 
@@ -177,8 +208,9 @@ struct LatticeData
   ObjectMap<SphereData>         sphereMap;
   ObjectMap<ParallelepipedData> parallelepipedMap;
   ObjectMap<SpheroidData>       spheroidMap;
-  const char *custom_geometry_specifier;
-
+  
+  CustomGeometryData custom_geometry;
+  
   double ax, ay, az, bx, by, bz, cx, cy, cz; //!< lattice vectors
   double ox, oy, oz; //!< origin of lattice, i.e. the (x,y,z) coords of site (0,0,0)
    
@@ -248,7 +280,7 @@ struct MaterialData
 
 //------------------------------------------------------------------------------
 
-//! pecify initial conditions for material(s) and species(s) within a region
+//! specify initial conditions for material(s) and species(s) within a region
 struct RegionalIcData
 {
   ObjectMap<PlaneData>          planeMap;
@@ -257,8 +289,8 @@ struct RegionalIcData
   ObjectMap<SphereData>         sphereMap;
   ObjectMap<ParallelepipedData> parallelepipedMap;
   ObjectMap<SpheroidData>       spheroidMap;
-  const char *custom_geometry_specifier;
-
+  CustomGeometryData custom_geometry;
+  
   ObjectMap<SpeciesData> speciesMap;
     
   double atomic_frequency; //!< initial value (optional)

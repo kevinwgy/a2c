@@ -11,7 +11,7 @@ using std::vector;
 
 int verbose;
 clock_t start_time;
-MPI_Comm intra_comm;
+MPI_Comm a2c_comm;
 
 //--------------------------------------------------------------
 void initializeStateVariables(Input &input, vector<vector<Int3> > &SS1, vector<vector<Int3> > &SS2, 
@@ -47,7 +47,13 @@ int main(int argc, char* argv[])
   //--------------------------------------------------------------
   MPI_Init(&argc, &argv);
   MPI_Comm comm = MPI_COMM_WORLD;
-  intra_comm = MPI_COMM_WORLD; //Different if DMD is coupled w/ something else
+  a2c_comm = MPI_COMM_WORLD; //Different if A2C is coupled w/ something else
+  int mpi_rank(-1);
+  MPI_Comm_rank(comm, &mpi_rank);
+
+  //--------------------------------------------------------------
+  // Prints A2C header
+  //--------------------------------------------------------------
   printHeader(argc, argv);
 
   //--------------------------------------------------------------

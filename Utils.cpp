@@ -15,21 +15,21 @@ using std::vector;
 using std::cout;
 using std::endl;
 
-extern MPI_Comm intra_comm;
+extern MPI_Comm a2c_comm;
 
 //--------------------------------------------------
 // MPI Rank 0 will print to stdout
 void print(const char format[],...)
 {
   int rank;
-  MPI_Comm_rank(intra_comm, &rank);
+  MPI_Comm_rank(a2c_comm, &rank);
   if(!rank) {
     va_list Argp;
     va_start(Argp, format);
     vprintf(format, Argp);
     va_end(Argp);
   }
-  MPI_Barrier(intra_comm);
+  MPI_Barrier(a2c_comm);
   return;
 }
 
@@ -54,7 +54,7 @@ void print(MPI_Comm& comm, const char format[],...)
 void print_error(const char format[],...)
 {
   int rank;
-  MPI_Comm_rank(intra_comm, &rank);
+  MPI_Comm_rank(a2c_comm, &rank);
 
   if(!rank) {
 
@@ -68,7 +68,7 @@ void print_error(const char format[],...)
     vprintf(format_colored, Argp);
     va_end(Argp);
   }
-  MPI_Barrier(intra_comm);
+  MPI_Barrier(a2c_comm);
   return;
 }
 
@@ -100,7 +100,7 @@ void print_error(MPI_Comm& comm, const char format[],...)
 void print_warning(const char format[],...)
 {
   int rank;
-  MPI_Comm_rank(intra_comm, &rank);
+  MPI_Comm_rank(a2c_comm, &rank);
 
   if(!rank) {
 
@@ -114,7 +114,7 @@ void print_warning(const char format[],...)
     vprintf(format_colored, Argp);
     va_end(Argp);
   }
-  MPI_Barrier(intra_comm);
+  MPI_Barrier(a2c_comm);
   return;
 }
 
@@ -147,7 +147,7 @@ void print_warning(MPI_Comm& comm, const char format[],...)
 void print(int i, const char format[],...)
 {
   int rank;
-  MPI_Comm_rank(intra_comm,&rank);
+  MPI_Comm_rank(a2c_comm,&rank);
 
   if(rank == i) {
     va_list Argp;
@@ -156,7 +156,7 @@ void print(int i, const char format[],...)
     va_end(Argp);
   }
 
-  MPI_Barrier(intra_comm);
+  MPI_Barrier(a2c_comm);
   return;
 }
 */
@@ -183,7 +183,7 @@ void print(MPI_Comm& comm, int i, const char format[],...)
 void print(FILE* fd, const char format[],...)
 {
   int rank;
-  MPI_Comm_rank(intra_comm,&rank);
+  MPI_Comm_rank(a2c_comm,&rank);
 
   if(!rank) {
     va_list Argp;
@@ -192,7 +192,7 @@ void print(FILE* fd, const char format[],...)
     va_end(Argp);
   }
 
-  MPI_Barrier(intra_comm);
+  MPI_Barrier(a2c_comm);
   return;
 }
 
@@ -241,8 +241,8 @@ const string getCurrentDateTime()
 void printHeader(int argc, char *argv[])
 {
   int size, rank;
-  MPI_Comm_size(intra_comm, &size);
-  MPI_Comm_rank(intra_comm, &rank);
+  MPI_Comm_size(a2c_comm, &size);
+  MPI_Comm_rank(a2c_comm, &rank);
   if(!rank) {
     cout << endl;
     cout << "\033[0;38;5;162m   .----------------.  .----------------.  .----------------.  \033[0m" << endl;
@@ -273,7 +273,7 @@ void printHeader(int argc, char *argv[])
   } else 
     sleep(0.1); //wait until the message gets printed to the screen
 
-  //MPI_Barrier(intra_comm); //not friendly to concurrent programs
+  //MPI_Barrier(a2c_comm); //not friendly to concurrent programs
   //
   return;
 }

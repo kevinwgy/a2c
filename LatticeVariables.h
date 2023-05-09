@@ -14,6 +14,10 @@ class LatticeVariables {
 
 public:
 
+  Vec3D lmin, lmax; //!< min and max lattice coords
+
+  int size; //!< size of all the vectors below
+
   std::vector<int> siteid; //!< the site group id of each site
   std::vector<int> matid; //!< the material id of each 
 
@@ -22,7 +26,7 @@ public:
   std::vector<Vec3D> q; //!< mean position (NOT displacement)
   std::vector<Vec3D> q0; //!< initial mean position
 
-  std::vector<Vec3D> p; //!< mean momentum
+//  std::vector<Vec3D> p; //!< mean momentum
 
   std::vector<double> sigma; //!< atomic frequency
 
@@ -33,8 +37,10 @@ public:
 
 public:
 
-  LatticeVariables() {}
-  ~LatticeVariables() {}
+  LatticeVariables();
+  ~LatticeVariables();
+
+  void Clear();
 
 };
 

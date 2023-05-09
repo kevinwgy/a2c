@@ -1,9 +1,12 @@
 #include<SpaceOperator.h>
 #include<LatticeVariables.h>
 #include<Utils.h>
-#include<GeoTools/DistancePointToParallelepiped.h>
-#include<GeoTools/DistancePointToSpheroid.h>
-#include<GeoTools/BoundingBoxes.h>
+#include<DistancePointToParallelepiped.h>
+#include<DistancePointToSpheroid.h>
+#include<BoundingBoxes.h>
+#include<cmath> //isfinite, floor
+#include<climits> //LLONG_MAX
+using std::isfinite;
 using std::vector;
 
 //---------------------------------------------------------------------
@@ -41,8 +44,10 @@ SpaceOperator::SetupLatticeVariables(vector<LatticeVariables> &LVS)
 //---------------------------------------------------------------------
 
 void
-SpaceOperator::CreateOneLattice(vector<LatticeVariables> &LV, LatticeStructure &lat, LatticeData &iod_lat)
+SpaceOperator::CreateOneLattice(LatticeStructure &lat, LatticeData &iod_lat, LatticeVariables &LV)
 {
+
+  LV.Clear();
 
   //----------------------------------------------------------------
   // Step 0: Get lattice structure info
@@ -57,6 +62,7 @@ SpaceOperator::CreateOneLattice(vector<LatticeVariables> &LV, LatticeStructure &
   //----------------------------------------------------------------
   // Step 1: Find a bounding box in terms of lattice coordinates
   //----------------------------------------------------------------
+  Int3 lmin_int, lmax_int;
   Vec3D lmin(DBL_MAX), lmax(-DBL_MAX), lmin_local, lmax_local;
 
   // Go over cylinder-cones
@@ -178,28 +184,286 @@ SpaceOperator::CreateOneLattice(vector<LatticeVariables> &LV, LatticeStructure &
     }
   }
 
-  if(lmin[0]>=lmax[0] || lmin[1]>=lmax[1] || lmin[2]>=lmax[2]) {
-    print_error("*** Error: Unable to find a bounding box for lattice domain [%d]. Domain is unbounded.\n",
-                lattice_id);
+  //TODO: Account for user-specified custom geometry!
+
+  for(int i=0; i<3; i++) {
+    if(!isfinite(lmin[i]) || !isfinite(lmax[i]) || lmin[i]>=lmax[i]) {
+      print_error("*** Error: Unable to find a bounding box for lattice domain [%d]. Domain is unbounded.\n",
+                  lattice_id);
+      exit_mpi();
+    }
+  }
+
+  for(int i=0; i<3; i++) {
+    lmin_int[i] = floor(lmin[i]);
+    lmax_int[i] = ceil(lmax[i]) + 1;
+    //-------------------------------
+    //NOTE: lmax_int stores MAX+1, so that in the "for"
+    //      loops below, we check k<lmax_int[i] for stopping
+    //-------------------------------
+  }
+    
+
+  //----------------------------------------------------------------
+  // Step 2: Setup the operation order for user-specified geometries
+  //----------------------------------------------------------------
+  vector<std::pair<int,int> > order;  //<geom type, geom dataMap index>
+  FindUserSpecifiedGeometryOrder(lattice_id, iod_lat, order);
+
+
+  //----------------------------------------------------------------
+  // Step 3: Splitting the work. Each processor checks some cells.
+  //----------------------------------------------------------------
+  long long lk_size_ll = lmax_int[2] - lmin_int[2];
+  long long lj_size_ll = lmax_int[1] - lmin_int[1];
+  long long li_size_ll = lmax_int[0] - lmin_int[0];
+  long long sample_size = lk_size_ll*lj_size_ll*li_size_ll;
+
+  if(!isfinite(Nc)) {
+    print_error("*** Error: The bounding box for lattice domain [%d] is too large (>%lld unit cells).\n",
+                lattice_id, LLONG_MAX);
+    exit_mpi();
+  }
+  int mpi_rank(-1), mpi_size(0);
+  MPI_Comm_rank(comm, &mpi_rank);
+  MPI_Comm_size(comm, &mpi_size);
+  
+  long long block_size = sample_size/mpi_size; //floor((double)sample_size/(double)mpi_size);
+  long long remainder = sample_size - block_size*mpi_size;
+  assert(remainder>=0 && remainder<mpi_size);
+
+  //prepare for comm.
+  long long* counts = new long long[mpi_size];
+  long long* displacements = new long long[mpi_size];
+  for(int i=0; i<mpi_size; i++) {
+    counts[i] = (i<remainder) ? block_size + 1 : block_size;
+    displacements[i] = (i<remainder) ? (block_size+1)*i : block_size*i + remainder;
+  }
+  assert(displacements[mpi_size-1]+counts[mpi_size-1] == sample_size);
+
+  long long my_start_id = displacements[mpi_rank];
+  long long my_block_size = counts[mpi_rank];
+
+
+  //----------------------------------------------------------------
+  // Step 4: Check for input error in site group ID
+  //----------------------------------------------------------------
+  std::set<int> site_group_tracker; //for error detection only
+  for(auto&& sg : iod_lat.siteMap.dataMap) {
+    if(sg.first<0 || sg.first>=iod_lat.siteMap.dataMap.size()) {
+      print_error("*** Error: Lattice[%d] has incorrect site group ID (%d).\n", lattice_id, sg.first);
+      exit_mpi();
+    }
+    site_group_tracker.insert(sg.first);
+  }
+  if(site_group_tracker.size() != iod_lat.siteMap.dataMap.size()) {
+    print_error("*** Error: Lattice[%d] has incorrect (conflicting) site group IDs.\n", lattice_id);
     exit_mpi();
   }
 
 
   //----------------------------------------------------------------
-  // Step 2: Create lattice sites (l, q), siteid, and matid
+  // Step 5: Each processor completes its assignment
   //----------------------------------------------------------------
-  I AM HERE 
+  int lk0 = my_start_id/(lj_size_ll*li_size_ll);
+  int lj0 = (my_start_id - (long long)lk0*lj_size_ll*li_size_ll)/li_size_ll;
+  int li0 = my_start_id - (long long)lk0*lj_size_ll*li_size_ll - (long long)ij0*li_size_ll; 
+  lk0 += lmin_int[2];
+  lj0 += lmin_int[1];
+  li0 += lmin_int[0];
+  assert(isfinite(lk0) && isfinite(lk1) && isfinite(lk2));
 
+  long long it_counter = 0; 
+  int nSites = 0;
+  for(int lk=lk0; lk<lmax_int[2]; lk++) {
+    for(int lj=(lk==lk0 ? lj0 : lmin_int[1]); lj<lmax_int[1]; lj++) {
+      for(int li=(lk==lk0 && lj==lj0 ? li0 : lmin_int[0]); li<lmax_int[0]; li++) {
 
+        // add new sites to LV
+        nSites += CheckAndAddSitesInCell(li, lj, lk, lat, iod_lat, order, LV);
 
+        if(++it_counter==my_block_size)
+          goto END_OF_ASSIGNMENT; 
+      }
+    }
+  }
+
+END_OF_ASSIGNMENT:
 
 }
 
 //---------------------------------------------------------------------
 
+void
+SpaceOperator::SortUserSpecifiedGeometries(int lattice_id, LatticeData &iod_lat,
+                                           vector<std::pair<int,int> > &order)
+I AM HERE! Just changed names!
+{
+  //NOTE: "order" records the index of the geometry in the "dataMap", not the ID of the geometry
+  //      specified by the user in the input file.
+
+  //--------------------------------------------------------
+  // Step 1: Find the number of user-specified geometries
+  //--------------------------------------------------------
+  int nGeom = iod_lat.planeMap.dataMap.size() //0
+            + iod_lat.cylinderconeMap.dataMap.size() //1
+            + iod_lat.cylindersphereMap.dataMap.size() //2
+            + iod_lat.sphereMap.dataMap.dataMap.size() //3
+            + iod_lat.parallelepipedMap.dataMap.size() //4
+            + iod_lat.spheroidMap.dataMap.size(); //5
+  if(!strcmp(iod_lat.custom_geometry.specifier, "")) //6 (user has specified a custom geometry)
+    nGeom++;
+
+  order.assign(nGeom, std::make_pair(-1,-1));
+
+  //--------------------------------------------------------
+  // Step 2: Loop through all of them to determine the order
+  //--------------------------------------------------------
+  std::set<int> geom_tracker; //for error detection only
+
+  for(auto it = iod_lat.planeMap.dataMap.begin(); it != iod_lat.planeMap.dataMap.end(); it++) {
+    geom_tracker.insert(it->first);
+    if(it->second.order<0 || it->second.order>=nGeom || order[it->second.order].first!=-1) {
+      print_error("*** Error: Lattice[%d]->Plane[%d] has invalid or conflicting order (%d).\n", 
+                  lattice_id, it->first, it->second.order);
+      exit_mpi();
+    }
+    order[it->second.order].first  = 0; //planes
+    order[it->second.order].second = it - iod_lat.planeMap.dataMap.begin();
+  }
+  if(geom_tracker.size() != iod_lat.planeMap.dataMap.size()) {
+    print_error("*** Error: Lattice[%d] has invalid (possibly duplicate) planes.\n", lattice_id);
+    exit_mpi();
+  }
+  geom_tracker.clear();
+
+  for(auto it = iod_lat.cylinderconeMap.dataMap.begin(); it != iod_lat.cylinderconeMap.dataMap.end();
+      it++) {
+    geom_tracker.insert(it->first);
+    if(it->second.order<0 || it->second.order>=nGeom || order[it->second.order].first!=-1) {
+      print_error("*** Error: Lattice[%d]->CylinderAndCone[%d] has invalid or conflicting order (%d).\n", 
+                  lattice_id, it->first, it->second.order);
+      exit_mpi();
+    }
+    order[it->second.order].first  = 1; //cylindercone
+    order[it->second.order].second = it - iod_lat.cylinderconeMap.dataMap.begin();
+  }
+  if(geom_tracker.size() != iod_lat.cylinderconeMap.dataMap.size()) {
+    print_error("*** Error: Lattice[%d] has invalid (possibly duplicate) cylinder-cones.\n", lattice_id);
+    exit_mpi();
+  }
+  geom_tracker.clear();
+
+  for(auto it = iod_lat.cylindersphereMap.dataMap.begin(); it != iod_lat.cylindersphereMap.dataMap.end();
+      it++) {
+    geom_tracker.insert(it->first);
+    if(it->second.order<0 || it->second.order>=nGeom || order[it->second.order].first!=-1) {
+      print_error("*** Error: Lattice[%d]->CylinderWidthSphericalCaps[%d] has invalid or "
+                  "conflicting order (%d).\n", lattice_id, it->first, it->second.order);
+      exit_mpi();
+    }
+    order[it->second.order].first  = 2; //cylindersphere
+    order[it->second.order].second = it - iod_lat.cylindersphereMap.dataMap.begin();
+  }
+  if(geom_tracker.size() != iod_lat.cylindersphereMap.dataMap.size()) {
+    print_error("*** Error: Lattice[%d] has invalid (possibly duplicate) cylinder-spheres.\n", lattice_id);
+    exit_mpi();
+  }
+  geom_tracker.clear();
+
+  for(auto it = iod_lat.sphereMap.dataMap.begin(); it != iod_lat.sphereMap.dataMap.end();
+      it++) {
+    geom_tracker.insert(it->first);
+    if(it->second.order<0 || it->second.order>=nGeom || order[it->second.order].first!=-1) {
+      print_error("*** Error: Lattice[%d]->Sphere[%d] has invalid or "
+                  "conflicting order (%d).\n", lattice_id, it->first, it->second.order);
+      exit_mpi();
+    }
+    order[it->second.order].first  = 3; //sphere
+    order[it->second.order].second = it - iod_lat.sphereMap.dataMap.begin();
+  }
+  if(geom_tracker.size() != iod_lat.sphereMap.dataMap.size()) {
+    print_error("*** Error: Lattice[%d] has invalid (possibly duplicate) spheres.\n", lattice_id);
+    exit_mpi();
+  }
+  geom_tracker.clear();
+
+  for(auto it = iod_lat.parallelepipedMap.dataMap.begin(); it != iod_lat.parallelepipedMap.dataMap.end();
+      it++) {
+    geom_tracker.insert(it->first);
+    if(it->second.order<0 || it->second.order>=nGeom || order[it->second.order].first!=-1) {
+      print_error("*** Error: Lattice[%d]->Parallelepiped[%d] has invalid or "
+                  "conflicting order (%d).\n", lattice_id, it->first, it->second.order);
+      exit_mpi();
+    }
+    order[it->second.order].first  = 4; //parallelepiped
+    order[it->second.order].second = it - iod_lat.parallelepipedMap.dataMap.begin();
+  }
+  if(geom_tracker.size() != iod_lat.parallelepipedMap.dataMap.size()) {
+    print_error("*** Error: Lattice[%d] has invalid (possibly duplicate) parallelepipeds.\n", lattice_id);
+    exit_mpi();
+  }
+  geom_tracker.clear();
+
+  for(auto it = iod_lat.spheroidMap.dataMap.begin(); it != iod_lat.spheroidMap.dataMap.end();
+      it++) {
+    geom_tracker.insert(it->first);
+    if(it->second.order<0 || it->second.order>=nGeom || order[it->second.order].first!=-1) {
+      print_error("*** Error: Lattice[%d]->Spheroid[%d] has invalid or "
+                  "conflicting order (%d).\n", lattice_id, it->first, it->second.order);
+      exit_mpi();
+    }
+    order[it->second.order].first  = 5; //spheroid
+    order[it->second.order].second = it - iod_lat.spheroidMap.dataMap.begin();
+  }
+  if(geom_tracker.size() != iod_lat.spheroidMap.dataMap.size()) {
+    print_error("*** Error: Lattice[%d] has invalid (possibly duplicate) spheroids.\n", lattice_id);
+    exit_mpi();
+  }
+  geom_tracker.clear();
+
+  if(!strcmp(iod_lat.custom_geometry.specifier, "")) {
+    if(iod_lat.custom_geometry.order<0 || iod_lat.custom_geometry>=nGeom ||
+       order[iod_lat.custom_geometry.order].first!=-1) {
+      print_error("*** Error: Lattice[%d]->CustomGeometry has invalid or "
+                  "conflicting order (%d).\n", lattice_id, iod_lat.custom_geometry.order);
+      exit_mpi();
+    }
+    order[iod_lat.custom_geometry.order].first  = 6; //custom geometry
+    order[iod_lat.custom_geometry.order].second = 0;
+  }
+ 
+  for(auto&& oo : order)
+    assert(oo.first>=0 && oo.second>=0);
+
+}
 
 //---------------------------------------------------------------------
 
+int
+SpaceOperator::CheckAndAddSitesInCell(int li, int lj, int lk, LatticeStructure &lat,
+                                      LatticeData &iod_lat, vector<std::pair<int,int> > &order,
+                                      LatticeVariables &LV)
+{
+  // Loop through site groups
+  Vec3D q;
+  bool in_domain = true;
+  for(int sid = 0; sid < (int)lat.site_coords.size(); sid++) {
+    q = lat.site_coords[sid] + Vec3D(li, lj, lk); //position
+
+    for(auto&& oo : order) { //loop through the geometries in user-specified order
+
+      if(oo.first == 0) {//plane
+        auto it = iod_lat.planeMap.dataMap.begin() + oo.second;
+        
+
+      }
+    }
+  }
+
+}
+
+//---------------------------------------------------------------------
 
 //---------------------------------------------------------------------
 

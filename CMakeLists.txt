@@ -64,6 +64,7 @@ add_executable(a2c
 Main.cpp
 IoData.cpp
 LatticeStructure.cpp
+LatticeVariables.cpp
 Output.cpp
 Utils.cpp
 MaterialOperator.cpp

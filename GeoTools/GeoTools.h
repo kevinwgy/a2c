@@ -108,6 +108,27 @@ inline double GetNormalAndAreaOfTriangle(Vec3D& xA, Vec3D& xB, Vec3D& xC,
 }                                  
 
 /**************************************************************************
+ * Project a point onto a plane defined by a point on the plane and the
+ * normal direction
+ *   Inputs:
+ *     x0 -- the point
+ *     O  -- a point on the plane
+ *     dir -- normal direction
+ *     normalized -- (T/F) whether "dir" is normalized (i.e. norm = 1)
+ *   Outputs:
+ *     return value -- SIGNED distance from the point to the plane, along "dir"
+ */
+inline double ProjectPointToPlane(Vec3D& x0, Vec3D& O, Vec3D& dir, bool normalized = false)
+{
+  if(normalized)
+    return (x0-O)*dir;
+
+  double norm = dir.norm(); 
+  assert(norm!=0.0);
+  return (X0-O)*dir/norm;
+}
+
+/**************************************************************************
  * Project a point onto a plane defined by a triangle in 3D, specified by nodal coordinates
  *   Inputs:
  *     x0 -- the point
