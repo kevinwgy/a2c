@@ -16,12 +16,15 @@ namespace GeoTools {
  ***********************************************************/
 
 class DistanceFromPointToCylinderCone {
-//  __________________ 
-// |          L      |\
-// |__dir            |_\cone height
-// |x0      |R       | /_ opening angle
-// |________|________|/_/_ _
-//
+
+/***********************************
+  __________________ 
+ |          L      |\
+ |__dir            |_\cone height
+ |x0      |R       | /_ opening angle
+ |________|________|/_/_ _
+***********************************/
+
   Vec3D x0; //!< center of the base disk of the cylinder
   Vec3D dir; //!< axis of the cylinder-cone (from base to the other end)
   double L, R; //!< cylinder height and radius;

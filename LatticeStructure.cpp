@@ -77,9 +77,9 @@ LatticeStructure::Setup(int lattice_id_, LatticeData &iod_lattice, int nMaterial
     }
     site_tracker.insert(site_id);
 
-    site_coords[site_id][0] = it->second.la;
-    site_coords[site_id][1] = it->second.lb;
-    site_coords[site_id][2] = it->second.lc;
+    site_coords[site_id][0] = it->second->la;
+    site_coords[site_id][1] = it->second->lb;
+    site_coords[site_id][2] = it->second->lc;
     for(int i=0; i<3; i++) {
       if(site_coords[site_id][i]<0.0 || site_coords[site_id][i]>=1.0) {
         print_error("*** Error: Site coords must be in [0, 1). Detected %e.\n", site_coords[site_id][i]);
@@ -87,7 +87,7 @@ LatticeStructure::Setup(int lattice_id_, LatticeData &iod_lattice, int nMaterial
       }
     }
 
-    site_matid[site_id] = it->second.materialid;
+    site_matid[site_id] = it->second->materialid;
     if(site_matid[site_id]<0 || site_matid[site_id]>=nMaterials) {
       print_error("*** Error: Detected non-existent material id (%d) in Lattice[%d]->Site[%d].\n",
                   site_matid[site_id], lattice_id, site_id);

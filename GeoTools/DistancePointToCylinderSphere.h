@@ -76,17 +76,17 @@ public:
       rdir /= r;
 
     //calculate unsigned distance from node to the boundary of the cylinder
-    double dist;
+    double dist, rb, rf;
     if(back_cap && x<=-Lhalf) {
       Vec3D vec = *(Vec3D *)Q_ - xb;
-      double rb = vec.norm();
+      rb = vec.norm();
       dist = fabs(rb - R);
       if(P)
         *(Vec3D *)P = xb + R*(rb==0 ? -dir : vec/rb);
     }
     else if(front_cap && x>= Lhalf) {
       Vec3D vec = *(Vec3D *)Q_ - xf;
-      double rf = vec.norm();
+      rf = vec.norm();
       dist = fabs(rf - R);
       if(P)
         *(Vec3D *)P = xf + R*(rf==0 ? dir : vec/rf);

@@ -1,13 +1,21 @@
 #include<SpaceOperator.h>
 #include<LatticeVariables.h>
+#include<UserDefinedGeometry.h>
 #include<Utils.h>
 #include<DistancePointToParallelepiped.h>
 #include<DistancePointToSpheroid.h>
+#include<DistancePointToSphere.h>
+#include<DistancePointToCylinderCone.h>
+#include<DistancePointToCylinderSphere.h>
+#include<DistancePointToPlane.h>
 #include<BoundingBoxes.h>
 #include<cmath> //isfinite, floor
 #include<climits> //LLONG_MAX
+#include<dlfcn.h> //dlopen, dlclose (dynamic linking)
+#include<tuple>
 using std::isfinite;
 using std::vector;
+using namespace GeoTools;
 
 //---------------------------------------------------------------------
 
@@ -36,7 +44,7 @@ SpaceOperator::SetupLatticeVariables(vector<LatticeVariables> &LVS)
   for(auto&& l : iod.latticeMap.dataMap) {
     int lid = l.first; //lattice id
     assert(lid>=0 && lid<nLattices);
-    CreateOneLattice(LVS[lid], lats[lid], l.second); 
+    CreateOneLattice(LVS[lid], lats[lid], *l.second); 
   }
 
 }
@@ -49,151 +57,63 @@ SpaceOperator::CreateOneLattice(LatticeStructure &lat, LatticeData &iod_lat, Lat
 
   LV.Clear();
 
-  //----------------------------------------------------------------
-  // Step 0: Get lattice structure info
-  //----------------------------------------------------------------
   int lattice_id = lat.GetLatticeID();
-  Vec3D O = lat.GetLatticeOrigin();
-  Vec3D dirabc[3];
-  for(int i=0; i<3; i++)
-    dirabc[i] = lat.GetLatticeDirection(i);
+  print("- Creating Lattice[%d].\n", lattice_id);
 
 
   //----------------------------------------------------------------
-  // Step 1: Find a bounding box in terms of lattice coordinates
+  // Step 1: Setup the operation order for user-specified geometries.
+  //         Also, create signed distance calculators for later use.
   //----------------------------------------------------------------
+  //--------------------------------
+  // Internal Geometry ID:
+  // Plane: 0, CylinderCone: 1, CylinderSphere: 2, Sphere: 3,
+  // Parallelepiped: 4, Spheroid: 5, Custom-Geometry: 6
+  //-------------------------------------
+  vector<std::pair<int,int> > order;  //<geom type, geom dataMap index>
+  vector<DistanceFromPointToPlane*> plane_cal;
+  vector<DistanceFromPointToCylinderCone*> cylindercone_cal;
+  vector<DistanceFromPointToCylinderSphere*> cylindersphere_cal;
+  vector<DistanceFromPointToSphere*> sphere_cal;
+  vector<DistanceFromPointToParallelepiped*> parallelepiped_cal;
+  vector<DistanceFromPointToSpheroid*> spheroid_cal;
+
+  SortUserSpecifiedGeometries(lattice_id, iod_lat, order, plane_cal, cylindercone_cal,
+                              cylindersphere_cal, sphere_cal, parallelepiped_cal, spheroid_cal);
+
+
+  //----------------------------------------------------------------
+  // Step 2: Setup user-specified custom geometry specifier
+  //----------------------------------------------------------------
+  std::tuple<UserDefinedGeometry*,void*,DestroyUDG*> user_geom(std::make_tuple(nullptr,nullptr,nullptr));
+  if(strcmp(iod_lat.custom_geometry.specifier,"")) { //user has specified a custom geometry
+    std::get<1>(user_geom) = dlopen(iod_lat.custom_geometry.specifier, RTLD_NOW);
+    if(std::get<1>(user_geom)) {
+      print_error("*** Error: Unable to load object %s.\n", iod_lat.custom_geometry.specifier);
+      exit_mpi();
+    }
+    dlerror();
+    std::get<2>(user_geom) = (DestroyUDG*) dlsym(std::get<1>(user_geom), "Destroy");
+    dlsym_error = dlerror();
+    if(dlsym_error) {
+      print_error("*** Error: Unable to find function Destroy in %s.\n",
+                  iod_lat.custom_geometry.specifier); 
+      exit_mpi();
+    }
+
+    //This is the actual object. 
+    std::get<0>(user_geom) = create();
+    print("  o Loaded user-defined geometry specifier from %s.\n", iod_lat.custom_geometry.specifier);
+  }
+
+
+  //----------------------------------------------------------------
+  // Step 3: Find a bounding box in terms of lattice coordinates.
+  //----------------------------------------------------------------
+  Vec3D lmin, lmax;
+  FindLatticeDomainBoundingBox(lat, iod_lat, std::get<0>(user_geom), lmin, lmax);
+
   Int3 lmin_int, lmax_int;
-  Vec3D lmin(DBL_MAX), lmax(-DBL_MAX), lmin_local, lmax_local;
-
-  // Go over cylinder-cones
-  for(auto it = iod_lat.cylinderconeMap.dataMap.begin(); it != iod_lat.cylinderconeMap.dataMap.end(); it++) {
-    if(it->second.inclusion == CylinderConeData::EXTERIOR)
-      continue;
-    
-    Vec3D x0(it->second->cen_x, it->second->cen_y, it->second->cen_z); //center of the base disk
-    Vec3D dir(it->second->nx, it->second->ny, it->second->nz);
-    dir /= dir.norm();
-    
-    double L = it->second->L; //cylinder height
-    double R = it->second->r; //cylinder radius
-    double tan_alpha = tan(it->second->opening_angle_degrees/180.0*acos(-1.0));//opening angle
-    double Hmax = R/tan_alpha;
-    double H = std::min(it->second->cone_height, Hmax); //cone's height
-    
-    GeoTools::GetBoundingBoxOfCylinderCone(x0, dir, R, L, tan_alpha, H, O, dirabc[0], dirabc[1], dirabc[2],
-                                           lmin_local, lmax_local, true); //dir have been normalized.
-
-    for(int i=0; i<3; i++) {
-      if(lmin_local[i] < lmin[i])
-        lmin[i] = lmin_local[i]; 
-      if(lmax_local[i] > lmax[i])
-        lmax[i] = lmax_local[i];
-    }
-  }
-
-  // Go over cylinder-spheres (i.e. possibly with end cap(s))
-  for(auto it = iod_lat.cylindersphereMap.dataMap.begin(); it != iod_lat.cylindersphereMap.dataMap.end(); it++) {
-    if(it->second.inclusion == CylinderSphereData::EXTERIOR)
-      continue;
-
-    Vec3D x0(it->second->cen_x, it->second->cen_y, it->second->cen_z); //center of base disk
-    Vec3D dir(it->second->nx, it->second->ny, it->second->nz);
-    dir /= dir.norm();
-
-    double L = it->second->L; //cylinder height
-    double R = it->second->r; //cylinder & sphere's radius
-    bool front_cap = (it->second->front_cap == CylinderSphereData::On);
-    bool back_cap = (it->second->back_cap == CylinderSphereData::On);
-
-    GeoTools::GetBoundingBoxOfCylinderSphere(x0, dir, R, L, front_cap, back_cap, O, dirabc[0], dirabc[1],
-                                             dirabc[2], lmin_local, lmax_local, true); //dir normalized
-
-    for(int i=0; i<3; i++) {
-      if(lmin_local[i] < lmin[i])
-        lmin[i] = lmin_local[i]; 
-      if(lmax_local[i] > lmax[i])
-        lmax[i] = lmax_local[i];
-    }
-  }
-
-  // Go over spheres
-  for(auto it = iod_lat.sphereMap.dataMap.begin(); it != iod_lat.sphereMap.dataMap.end(); it++) {
-    if(it->second->inclusion == SphereData::EXTERIOR)
-      continue;
-
-    Vec3D x0(it->second->cen_x, it->second->cen_y, it->second->cen_z);
-    double R = it->second->radius;
-
-    GeoTools::GetBoundingBoxOfSphere(x0, R, O, dirabc[0], dirabc[1], dirabc[2],
-                                     lmin_local, lmax_local, true); //dir normalized
-
-    for(int i=0; i<3; i++) {
-      if(lmin_local[i] < lmin[i])
-        lmin[i] = lmin_local[i]; 
-      if(lmax_local[i] > lmax[i])
-        lmax[i] = lmax_local[i];
-    }
-  }
-
-  // Go over parallelepipeds
-  for(auto it = iod_lat.parallelepipedMap.dataMap.begin(); 
-           it != iod_lat.parallelepipedMap.dataMap.end(); it++) {
-    if(it->second->inclusion == ParallelepipedData::EXTERIOR)
-      continue;
-
-    Vec3D x0(it->second->x0, it->second->y0, it->second->z0);
-    Vec3D oa(it->second->ax, it->second->ay, it->second->az);  oa -= x0;
-    Vec3D ob(it->second->bx, it->second->by, it->second->bz);  ob -= x0;
-    Vec3D oc(it->second->cx, it->second->cy, it->second->cz);  oc -= x0;
-
-    if(oa.norm()==0 || ob.norm()==0 || oc.norm()==0 || (oa^ob)*oc<=0.0) {
-      print_error("*** Error: Detected error in a user-specified parallelepiped. "
-                  "Overlapping vertices or violation of right-hand rule.\n");
-      exit_mpi();
-    }
-
-    GeoTools::GetBoundingBoxOfParallelepiped(x0, oa, ob, oc, O, dirabc[0], dirabc[1], dirabc[2],
-                                             lmin_local, lmax_local, true); //dir normalized
-
-    for(int i=0; i<3; i++) {
-      if(lmin_local[i] < lmin[i])
-        lmin[i] = lmin_local[i];
-      if(lmax_local[i] > lmax[i])
-        lmax[i] = lmax_local[i];
-    }
-  }
-
-  // Go over spheroids
-  for(auto it = iod_lat.spheroidMap.dataMap.begin(); it != iod_lat.spheroidMap.dataMap.end(); it++) {
-    if(it->second->inclusion == SpheroidData::EXTERIOR)
-      continue;
-
-    Vec3D x0(it->second->cen_x, it->second->cen_y, it->second->cen_z);
-    Vec3D axis(it->second->axis_x, it->second->axis_y, it->second->axis_z);
-    double semi_length = it->second->semi_length;
-    double r = it->second->radius;
-
-    GeoTools::GetBoundingBoxOfSpheroid(x0, axis, it->second->semi_length, it->second->radius, O,
-                                       dirabc[0], dirabc[1], dirabc[2], lmin_local, lmax_local, true);
-
-    for(int i=0; i<3; i++) {
-      if(lmin_local[i] < lmin[i])
-        lmin[i] = lmin_local[i];
-      if(lmax_local[i] > lmax[i])
-        lmax[i] = lmax_local[i];
-    }
-  }
-
-  //TODO: Account for user-specified custom geometry!
-
-  for(int i=0; i<3; i++) {
-    if(!isfinite(lmin[i]) || !isfinite(lmax[i]) || lmin[i]>=lmax[i]) {
-      print_error("*** Error: Unable to find a bounding box for lattice domain [%d]. Domain is unbounded.\n",
-                  lattice_id);
-      exit_mpi();
-    }
-  }
-
   for(int i=0; i<3; i++) {
     lmin_int[i] = floor(lmin[i]);
     lmax_int[i] = ceil(lmax[i]) + 1;
@@ -205,21 +125,31 @@ SpaceOperator::CreateOneLattice(LatticeStructure &lat, LatticeData &iod_lat, Lat
     
 
   //----------------------------------------------------------------
-  // Step 2: Setup the operation order for user-specified geometries
+  // Step 4: Check for input error in site group ID
   //----------------------------------------------------------------
-  vector<std::pair<int,int> > order;  //<geom type, geom dataMap index>
-  FindUserSpecifiedGeometryOrder(lattice_id, iod_lat, order);
-
+  std::set<int> site_group_tracker; //for error detection only
+  for(auto&& sg : iod_lat.siteMap.dataMap) {
+    if(sg.first<0 || sg.first>=iod_lat.siteMap.dataMap.size()) {
+      print_error("*** Error: Lattice[%d] has incorrect site group ID (%d).\n", lattice_id, sg.first);
+      exit_mpi();
+    }
+    site_group_tracker.insert(sg.first);
+  }
+  if(site_group_tracker.size() != iod_lat.siteMap.dataMap.size()) {
+    print_error("*** Error: Lattice[%d] has incorrect (conflicting) site group IDs.\n", lattice_id);
+    exit_mpi();
+  }
+ 
 
   //----------------------------------------------------------------
-  // Step 3: Splitting the work. Each processor checks some cells.
+  // Step 5: Split the work. Each processor checks some cells.
   //----------------------------------------------------------------
   long long lk_size_ll = lmax_int[2] - lmin_int[2];
   long long lj_size_ll = lmax_int[1] - lmin_int[1];
   long long li_size_ll = lmax_int[0] - lmin_int[0];
   long long sample_size = lk_size_ll*lj_size_ll*li_size_ll;
 
-  if(!isfinite(Nc)) {
+  if(!isfinite(sample_size)) {
     print_error("*** Error: The bounding box for lattice domain [%d] is too large (>%lld unit cells).\n",
                 lattice_id, LLONG_MAX);
     exit_mpi();
@@ -246,24 +176,7 @@ SpaceOperator::CreateOneLattice(LatticeStructure &lat, LatticeData &iod_lat, Lat
 
 
   //----------------------------------------------------------------
-  // Step 4: Check for input error in site group ID
-  //----------------------------------------------------------------
-  std::set<int> site_group_tracker; //for error detection only
-  for(auto&& sg : iod_lat.siteMap.dataMap) {
-    if(sg.first<0 || sg.first>=iod_lat.siteMap.dataMap.size()) {
-      print_error("*** Error: Lattice[%d] has incorrect site group ID (%d).\n", lattice_id, sg.first);
-      exit_mpi();
-    }
-    site_group_tracker.insert(sg.first);
-  }
-  if(site_group_tracker.size() != iod_lat.siteMap.dataMap.size()) {
-    print_error("*** Error: Lattice[%d] has incorrect (conflicting) site group IDs.\n", lattice_id);
-    exit_mpi();
-  }
-
-
-  //----------------------------------------------------------------
-  // Step 5: Each processor completes its assignment
+  // Step 6: Each processor completes its assignment
   //----------------------------------------------------------------
   int lk0 = my_start_id/(lj_size_ll*li_size_ll);
   int lj0 = (my_start_id - (long long)lk0*lj_size_ll*li_size_ll)/li_size_ll;
@@ -280,7 +193,9 @@ SpaceOperator::CreateOneLattice(LatticeStructure &lat, LatticeData &iod_lat, Lat
       for(int li=(lk==lk0 && lj==lj0 ? li0 : lmin_int[0]); li<lmax_int[0]; li++) {
 
         // add new sites to LV
-        nSites += CheckAndAddSitesInCell(li, lj, lk, lat, iod_lat, order, LV);
+        nSites += CheckAndAddSitesInCell(li, lj, lk, lat, iod_lat, order, plane_cal, cylindercone_cal,
+                                         cylindersphere_cal, sphere_cal, parallelepiped_cal, spheroid_cal,
+                                         std::get<0>(user_geom), LV);
 
         if(++it_counter==my_block_size)
           goto END_OF_ASSIGNMENT; 
@@ -290,14 +205,42 @@ SpaceOperator::CreateOneLattice(LatticeStructure &lat, LatticeData &iod_lat, Lat
 
 END_OF_ASSIGNMENT:
 
+
+
+  //----------------------------------------------------------------
+  // Step 7: Exchange data between processors
+  //----------------------------------------------------------------
+  
+
+  //----------------------------------------------------------------
+  // Clean-up
+  //----------------------------------------------------------------
+  for(auto&& ob : plane_cal)          if(ob) delete ob;
+  for(auto&& ob : cylindercone_cal)   if(ob) delete ob;
+  for(auto&& ob : cylindersphere_cal) if(ob) delete ob;
+  for(auto&& ob : sphere_cal)         if(ob) delete ob;
+  for(auto&& ob : parallelepiped_cal) if(ob) delete ob;
+  for(auto&& ob : spheroid_cal)       if(ob) delete ob;
+
+  if(std::get<0>(user_geom)) {
+    assert(std::get<2>(user_geom)); //this is the destruction function
+    (std::get<2>(user_geom))(std::get<0>(user_geom)); //use the destruction function to destroy the calculator
+    assert(std::get<1>(user_geom));
+    dlclose(std::get<1>(user_geom));
+  }
 }
 
 //---------------------------------------------------------------------
 
 void
 SpaceOperator::SortUserSpecifiedGeometries(int lattice_id, LatticeData &iod_lat,
-                                           vector<std::pair<int,int> > &order)
-I AM HERE! Just changed names!
+                                           vector<std::pair<int,int> > &order,
+                                           vector<DistanceFromPointToPlane*> &plane_cal,
+                                           vector<DistanceFromPointToCylinderCone*> &cylindercone_cal,
+                                           vector<DistanceFromPointToCylinderSphere*> &cylindersphere_cal,
+                                           vector<DistanceFromPointToSphere*> &sphere_cal,
+                                           vector<DistanceFromPointToParallelepiped*> &parallelepiped_cal,
+                                           vector<DistanceFromPointToSpheroid*> spheroid_cal)
 {
   //NOTE: "order" records the index of the geometry in the "dataMap", not the ID of the geometry
   //      specified by the user in the input file.
@@ -319,17 +262,35 @@ I AM HERE! Just changed names!
   //--------------------------------------------------------
   // Step 2: Loop through all of them to determine the order
   //--------------------------------------------------------
+  int gid;
   std::set<int> geom_tracker; //for error detection only
 
+  assert(plane_cal.empty());
+  plane_cal.assign(iod_lat.planeMap.dataMap.size(), NULL);
   for(auto it = iod_lat.planeMap.dataMap.begin(); it != iod_lat.planeMap.dataMap.end(); it++) {
     geom_tracker.insert(it->first);
-    if(it->second.order<0 || it->second.order>=nGeom || order[it->second.order].first!=-1) {
+    if(it->second->order<0 || it->second->order>=nGeom || order[it->second->order].first!=-1) {
       print_error("*** Error: Lattice[%d]->Plane[%d] has invalid or conflicting order (%d).\n", 
-                  lattice_id, it->first, it->second.order);
+                  lattice_id, it->first, it->second->order);
       exit_mpi();
     }
-    order[it->second.order].first  = 0; //planes
-    order[it->second.order].second = it - iod_lat.planeMap.dataMap.begin();
+
+    if(it->second->inclusion != PlaneData::INTERSECTION && it->second->inclusion != PlaneData::UNION) {
+      print_error("*** Error: Detected unsupported geometry inclusion operator "
+                  "(must be Intersection or Union).\n");
+      exit_mpi();
+    }
+
+    gid = it - iod_lat.planeMap.dataMap.begin(); 
+    order[it->second->order].first  = 0; //planes
+    order[it->second->order].second = gid;
+
+    Vec3D x0(it->second->cen_x, it->second->cen_y, it->second->cen_z);
+    Vec3D dir(it->second->nx, it->second->ny, it->second->nz);
+    plane_cal[gid] = new DistanceFromPointToPlane(x0, dir); 
+
+    print("  o Found Plane[%d]: (%e %e %e) | normal: (%e %e %e).\n", it->first,
+          x0[0], x0[1], x0[2], dir[0], dir[1], dir[2]);
   }
   if(geom_tracker.size() != iod_lat.planeMap.dataMap.size()) {
     print_error("*** Error: Lattice[%d] has invalid (possibly duplicate) planes.\n", lattice_id);
@@ -337,16 +298,40 @@ I AM HERE! Just changed names!
   }
   geom_tracker.clear();
 
+
+  assert(cylindercone_cal.empty());
+  cylindercone_cal.assign(iod_lat.cylinderconeMap.dataMap.size(), NULL);
   for(auto it = iod_lat.cylinderconeMap.dataMap.begin(); it != iod_lat.cylinderconeMap.dataMap.end();
       it++) {
     geom_tracker.insert(it->first);
-    if(it->second.order<0 || it->second.order>=nGeom || order[it->second.order].first!=-1) {
+    if(it->second->order<0 || it->second->order>=nGeom || order[it->second->order].first!=-1) {
       print_error("*** Error: Lattice[%d]->CylinderAndCone[%d] has invalid or conflicting order (%d).\n", 
-                  lattice_id, it->first, it->second.order);
+                  lattice_id, it->first, it->second->order);
       exit_mpi();
     }
-    order[it->second.order].first  = 1; //cylindercone
-    order[it->second.order].second = it - iod_lat.cylinderconeMap.dataMap.begin();
+
+    if(it->second->inclusion != CylinderConeData::INTERSECTION && 
+       it->second->inclusion != CylinderConeData::UNION) {
+      print_error("*** Error: Detected unsupported geometry inclusion operator "
+                  "(must be Intersection or Union).\n");
+      exit_mpi();
+    }
+
+    gid = it - iod_lat.cylinderconeMap.dataMap.begin();
+    order[it->second->order].first  = 1; //cylindercone
+    order[it->second->order].second = gid;
+
+    Vec3D x0(it->second->cen_x, it->second->cen_y, it->second->cen_z);
+    Vec3D dir(it->second->nx, it->second->ny, it->second->nz);
+    double L = it->second->L; //cylinder height
+    double R = it->second->r; //cylinder radius
+    double tan_alpha = tan(it->second->opening_angle_degrees/180.0*acos(-1.0));//opening angle
+    double Hmax = R/tan_alpha;
+    double H = min(it->second->cone_height, Hmax); //cone's height
+    cylindercone_cal[gid] = new DistanceFromPointToCylinderCone(x0,dir,L,R,tan_alpha,H);
+
+    print("  o Found Cylinder-Cone[%d]: Base center: (%e %e %e), Axis: (%e %e %e).\n", it->first,
+          x0[0], x0[1], x0[2], dir[0], dir[1], dir[2]);
   }
   if(geom_tracker.size() != iod_lat.cylinderconeMap.dataMap.size()) {
     print_error("*** Error: Lattice[%d] has invalid (possibly duplicate) cylinder-cones.\n", lattice_id);
@@ -354,16 +339,39 @@ I AM HERE! Just changed names!
   }
   geom_tracker.clear();
 
+
+  assert(cylindersphere_cal.empty());
+  cylindersphere_cal.assign(iod_lat.cylindersphereMap.dataMap.size(), NULL);
   for(auto it = iod_lat.cylindersphereMap.dataMap.begin(); it != iod_lat.cylindersphereMap.dataMap.end();
       it++) {
     geom_tracker.insert(it->first);
-    if(it->second.order<0 || it->second.order>=nGeom || order[it->second.order].first!=-1) {
+    if(it->second->order<0 || it->second->order>=nGeom || order[it->second->order].first!=-1) {
       print_error("*** Error: Lattice[%d]->CylinderWidthSphericalCaps[%d] has invalid or "
-                  "conflicting order (%d).\n", lattice_id, it->first, it->second.order);
+                  "conflicting order (%d).\n", lattice_id, it->first, it->second->order);
       exit_mpi();
     }
-    order[it->second.order].first  = 2; //cylindersphere
-    order[it->second.order].second = it - iod_lat.cylindersphereMap.dataMap.begin();
+
+    if(it->second->inclusion != CylinderSphereData::INTERSECTION && 
+       it->second->inclusion != CylinderSphereData::UNION) {
+      print_error("*** Error: Detected unsupported geometry inclusion operator "
+                  "(must be Intersection or Union).\n");
+      exit_mpi();
+    }
+
+    gid = it - iod_lat.cylindersphereMap.dataMap.begin();
+    order[it->second->order].first  = 2; //cylindersphere
+    order[it->second->order].second = gid;
+
+    Vec3D x0(it->second->cen_x, it->second->cen_y, it->second->cen_z); //center of base
+    Vec3D dir(it->second->nx, it->second->ny, it->second->nz);
+    double L = it->second->L; //cylinder height
+    double R = it->second->r; //cylinder radius
+    bool front_cap = (it->second->front_cap == CylinderSphereData::On);
+    bool back_cap = (it->second->back_cap == CylinderSphereData::On);
+    cylindersphere_cal[gid] = new DistanceFromPointToCylinderSphere(x0, dir, L, R, front_cap, back_cap);
+
+    print("  o Found Cylinder-Sphere[%d]: Base center: (%e %e %e), Axis: (%e %e %e).\n", it->first,
+          x0[0], x0[1], x0[2], dir[0], dir[1], dir[2]);
   }
   if(geom_tracker.size() != iod_lat.cylindersphereMap.dataMap.size()) {
     print_error("*** Error: Lattice[%d] has invalid (possibly duplicate) cylinder-spheres.\n", lattice_id);
@@ -371,16 +379,35 @@ I AM HERE! Just changed names!
   }
   geom_tracker.clear();
 
+
+  assert(sphere_cal.empty());
+  sphere_cal.assign(iod_lat.sphereMap.dataMap.size(), NULL);
   for(auto it = iod_lat.sphereMap.dataMap.begin(); it != iod_lat.sphereMap.dataMap.end();
       it++) {
     geom_tracker.insert(it->first);
-    if(it->second.order<0 || it->second.order>=nGeom || order[it->second.order].first!=-1) {
+    if(it->second->order<0 || it->second->order>=nGeom || order[it->second->order].first!=-1) {
       print_error("*** Error: Lattice[%d]->Sphere[%d] has invalid or "
-                  "conflicting order (%d).\n", lattice_id, it->first, it->second.order);
+                  "conflicting order (%d).\n", lattice_id, it->first, it->second->order);
       exit_mpi();
     }
-    order[it->second.order].first  = 3; //sphere
-    order[it->second.order].second = it - iod_lat.sphereMap.dataMap.begin();
+
+    if(it->second->inclusion != SphereData::INTERSECTION && 
+       it->second->inclusion != SphereData::UNION) {
+      print_error("*** Error: Detected unsupported geometry inclusion operator "
+                  "(must be Intersection or Union).\n");
+      exit_mpi();
+    }
+
+    gid = it - iod_lat.sphereMap.dataMap.begin();
+    order[it->second->order].first  = 3; //sphere
+    order[it->second->order].second = gid;
+
+    Vec3D x0(it->second->cen_x, it->second->cen_y, it->second->cen_z);
+    double R = it->second->radius;
+    sphere_cal[gid] = new DistanceFromPointToSphere(x0, R);
+
+    print("  o Found Sphere[%d]: Center: (%e %e %e), Radius: %e.\n", it->first,
+          x0[0], x0[1], x0[2], R);
   }
   if(geom_tracker.size() != iod_lat.sphereMap.dataMap.size()) {
     print_error("*** Error: Lattice[%d] has invalid (possibly duplicate) spheres.\n", lattice_id);
@@ -388,16 +415,44 @@ I AM HERE! Just changed names!
   }
   geom_tracker.clear();
 
+
+  assert(parallelepiped_cal.empty());
+  parallelepiped_cal.assign(iod_lat.parallelepipedMap.dataMap.size(), NULL);
   for(auto it = iod_lat.parallelepipedMap.dataMap.begin(); it != iod_lat.parallelepipedMap.dataMap.end();
       it++) {
     geom_tracker.insert(it->first);
-    if(it->second.order<0 || it->second.order>=nGeom || order[it->second.order].first!=-1) {
+    if(it->second->order<0 || it->second->order>=nGeom || order[it->second->order].first!=-1) {
       print_error("*** Error: Lattice[%d]->Parallelepiped[%d] has invalid or "
-                  "conflicting order (%d).\n", lattice_id, it->first, it->second.order);
+                  "conflicting order (%d).\n", lattice_id, it->first, it->second->order);
       exit_mpi();
     }
-    order[it->second.order].first  = 4; //parallelepiped
-    order[it->second.order].second = it - iod_lat.parallelepipedMap.dataMap.begin();
+
+    if(it->second->inclusion != ParallelepipedData::INTERSECTION && 
+       it->second->inclusion != ParallelepipedData::UNION) {
+      print_error("*** Error: Detected unsupported geometry inclusion operator "
+                  "(must be Intersection or Union).\n");
+      exit_mpi();
+    }
+
+    gid = it - iod_lat.parallelepipedMap.dataMap.begin();
+    order[it->second->order].first  = 4; //parallelepiped
+    order[it->second->order].second = gid;
+
+    Vec3D x0(it->second->x0, it->second->y0, it->second->z0);
+    Vec3D oa(it->second->ax, it->second->ay, it->second->az); oa -= x0;
+    Vec3D ob(it->second->bx, it->second->by, it->second->bz); ob -= x0;
+    Vec3D oc(it->second->cx, it->second->cy, it->second->cz); oc -= x0;
+
+    if(oa.norm()==0 || ob.norm()==0 || oc.norm()==0 || (oa^ob)*oc<=0.0) {
+      print_error("*** Error: Detected error in Lattice[%d]->Parallelepiped[%d]. "
+                  "Overlapping vertices or violation of right-hand rule.\n", lattice_id, it->first);
+      exit_mpi();
+    }
+
+    parallelepiped_cal[gid] = new DistanceFromPointToParallelepiped(x0, oa, ob, oc);
+
+    print("  o Found Parallelepiped[%d]: X(%e %e %e).\n", it->first,
+          x0[0], x0[1], x0[2]);
   }
   if(geom_tracker.size() != iod_lat.parallelepipedMap.dataMap.size()) {
     print_error("*** Error: Lattice[%d] has invalid (possibly duplicate) parallelepipeds.\n", lattice_id);
@@ -405,22 +460,42 @@ I AM HERE! Just changed names!
   }
   geom_tracker.clear();
 
+
+  assert(spheroid_cal.empty());
+  spheroid_cal.assign(iod_lat.spheroidMap.dataMap.size(), NULL);
   for(auto it = iod_lat.spheroidMap.dataMap.begin(); it != iod_lat.spheroidMap.dataMap.end();
       it++) {
     geom_tracker.insert(it->first);
-    if(it->second.order<0 || it->second.order>=nGeom || order[it->second.order].first!=-1) {
+    if(it->second->order<0 || it->second->order>=nGeom || order[it->second->order].first!=-1) {
       print_error("*** Error: Lattice[%d]->Spheroid[%d] has invalid or "
-                  "conflicting order (%d).\n", lattice_id, it->first, it->second.order);
+                  "conflicting order (%d).\n", lattice_id, it->first, it->second->order);
       exit_mpi();
     }
-    order[it->second.order].first  = 5; //spheroid
-    order[it->second.order].second = it - iod_lat.spheroidMap.dataMap.begin();
+
+    if(it->second->inclusion != SpheroidData::INTERSECTION && 
+       it->second->inclusion != SpheroidData::UNION) {
+      print_error("*** Error: Detected unsupported geometry inclusion operator "
+                  "(must be Intersection or Union).\n");
+      exit_mpi();
+    }
+
+    gid = it - iod_lat.spheroidMap.dataMap.begin();
+    order[it->second->order].first  = 5; //spheroid
+    order[it->second->order].second = gid;
+
+    Vec3D x0(it->second->cen_x, it->second->cen_y, it->second->cen_z);
+    Vec3D axis(it->second->axis_x, it->second->axis_y, it->second->axis_z);
+    spheroid_cal[gid] = new DistanceFromPointToSpheroid(x0, axis, it->second->semi_length, it->second->radius);
+
+    print("  o Found Spheroid[%d]: Center: (%e %e %e), Axis: (%e %e %e).\n", it->first,
+          x0[0], x0[1], x0[2], axis[0], axis[1], axis[2]);
   }
   if(geom_tracker.size() != iod_lat.spheroidMap.dataMap.size()) {
     print_error("*** Error: Lattice[%d] has invalid (possibly duplicate) spheroids.\n", lattice_id);
     exit_mpi();
   }
   geom_tracker.clear();
+
 
   if(!strcmp(iod_lat.custom_geometry.specifier, "")) {
     if(iod_lat.custom_geometry.order<0 || iod_lat.custom_geometry>=nGeom ||
@@ -429,6 +504,14 @@ I AM HERE! Just changed names!
                   "conflicting order (%d).\n", lattice_id, iod_lat.custom_geometry.order);
       exit_mpi();
     }
+
+    if(iod_lat.custom_geometry.inclusion != CustomGeometryData::INTERSECTION && 
+       iod_lat.custom_geometry.inclusion != CustomGeometryData::UNION) {
+      print_error("*** Error: Detected unsupported geometry inclusion operator "
+                  "(must be Intersection or Union).\n");
+      exit_mpi();
+    }
+
     order[iod_lat.custom_geometry.order].first  = 6; //custom geometry
     order[iod_lat.custom_geometry.order].second = 0;
   }
@@ -443,27 +526,264 @@ I AM HERE! Just changed names!
 int
 SpaceOperator::CheckAndAddSitesInCell(int li, int lj, int lk, LatticeStructure &lat,
                                       LatticeData &iod_lat, vector<std::pair<int,int> > &order,
+                                      vector<DistanceFromPointToPlane*> &plane_cal,
+                                      vector<DistanceFromPointToCylinderCone*> &cylindercone_cal,
+                                      vector<DistanceFromPointToCylinderSphere*> &cylindersphere_cal,
+                                      vector<DistanceFromPointToSphere*> &sphere_cal,
+                                      vector<DistanceFromPointToParallelepiped*> &parallelepiped_cal,
+                                      vector<DistanceFromPointToSpheroid*> spheroid_cal,
+                                      UserDefinedGeometry *geom_specifier,
                                       LatticeVariables &LV)
 {
+
   // Loop through site groups
-  Vec3D q;
-  bool in_domain = true;
+  Vec3D l, q;
+  bool in, intersect;
+  int counter = 0;
+ 
   for(int sid = 0; sid < (int)lat.site_coords.size(); sid++) {
-    q = lat.site_coords[sid] + Vec3D(li, lj, lk); //position
+    l = lat.site_coords[sid] + Vec3D(li, lj, lk); //lattice coords
+    q = lat.GetXYZ(l); //(x,y,z) coords
+
+    in = true; //always in R^3...
 
     for(auto&& oo : order) { //loop through the geometries in user-specified order
 
       if(oo.first == 0) {//plane
         auto it = iod_lat.planeMap.dataMap.begin() + oo.second;
-        
-
+        intersect = it->second->inclusion == PlaneData::INTERSECTION; //INTERSECTION or UNION
+        if((in && intersect) || (!in && !intersect)) //otherwise, no need to check, "in" remains the same
+          in = plane_cal[oo.second]->Calculate(q)>0.0;
       }
+      else if(oo.first == 1) {//cylindercone
+        auto it = iod_lat.cylinderconeMap.dataMap.begin() + oo.second;
+        intersect = it->second->inclusion == CylinderConeData::INTERSECTION;
+        if((in && intersect) || (!in && !intersect)) {
+          bool outside = cylindercone_cal[oo.second]->Calculate(q)>0.0;
+          in = (outside  && it->second->side==CylinderConeData::EXTERIOR) ||
+               (!outside && it->second->side==CylinderConeData::INTERIOR)
+        }
+      } 
+      else if(oo.first == 2) {//cylindersphere
+        auto it = iod_lat.cylindersphereMap.dataMap.begin() + oo.second;
+        intersect = it->second->inclusion == CylinderSphereData::INTERSECTION;
+        if((in && intersect) || (!in && !intersect)) {
+          bool outside = cylindersphere_cal[oo.second]->Calculate(q)>0.0;
+          in = (outside  && it->second->side==CylinderSphereData::EXTERIOR) ||
+               (!outside && it->second->side==CylinderSphereData::INTERIOR)
+        }
+      }
+      else if(oo.first == 3) {//sphere
+        auto it = iod_lat.sphereMap.dataMap.begin() + oo.second;
+        intersect = it->second->inclusion == SphereData::INTERSECTION;
+        if((in && intersect) || (!in && !intersect)) {
+          bool outside = sphere_cal[oo.second]->Calculate(q)>0.0;
+          in = (outside  && it->second->side==SphereData::EXTERIOR) ||
+               (!outside && it->second->side==SphereData::INTERIOR)
+        }
+      }
+      else if(oo.first == 4) {//parallelepiped
+        auto it = iod_lat.parallelepipedMap.dataMap.begin() + oo.second;
+        intersect = it->second->inclusion == ParallelepipedData::INTERSECTION;
+        if((in && intersect) || (!in && !intersect)) {
+          bool outside = parallelepiped_cal[oo.second]->Calculate(q)>0.0;
+          in = (outside  && it->second->side==ParallelepipedData::EXTERIOR) ||
+               (!outside && it->second->side==ParallelepipedData::INTERIOR)
+        }
+      }
+      else if(oo.first == 5) {//spheroid
+        auto it = iod_lat.spheroidMap.dataMap.begin() + oo.second;
+        intersect = it->second->inclusion == SpheroidData::INTERSECTION;
+        if((in && intersect) || (!in && !intersect)) {
+          bool outside = spheroid_cal[oo.second]->Calculate(q)>0.0;
+          in = (outside  && it->second->side==SpheroidData::EXTERIOR) ||
+               (!outside && it->second->side==SpheroidData::INTERIOR)
+        }
+      }
+      else if(oo.first == 6) {//user-specified custom geometry
+        intersect = iod_lat.custom_geometry.inclusion == CustomGeometryData::INTERSECTION;
+        if((in && intersect) || (!in && !intersect))
+          in = geom_specifier->IsPointInside(q, q, lat.GetLatticeOrigin(), lat.GetLatticeVector(0),
+                                             lat.GetLatticeVector(1), lat.GetLatticeVector(2));
+      }
+
+    }
+
+    if(in) {//add to LV
+      LV.l.push_back(l);
+      LV.q.push_back(q);
+      LV.q0.push_back(q);
+      LV.siteid.push_back(sid);
+      LV.matid.push_back(lat.site_matid[sid]);
+      LV.size++;
+      counter++;
+    }
+  }
+
+  return counter;
+
+}
+
+//---------------------------------------------------------------------
+
+void
+SpaceOperator::FindLatticeDomainBoundingBox(LatticeStructure &lat, LatticeData &iod_lat,
+                                            UserDefinedGeometry *geom_specifier, Vec3D &lmin, Vec3D &lmax)
+{
+
+  lmin = DBL_MAX;
+  lmax = -DBL_MAX;
+
+  Vec3D O = lat.GetLatticeOrigin();
+  Vec3D abc[3];
+  for(int i=0; i<3; i++)
+    abc[i] = lat.GetLatticeVector(i);
+
+  Vec3D lmin_local, lmax_local;
+
+  // Go over cylinder-cones
+  for(auto it = iod_lat.cylinderconeMap.dataMap.begin(); it != iod_lat.cylinderconeMap.dataMap.end(); it++) {
+    if(it->second->inclusion == CylinderConeData::EXTERIOR)
+      continue;
+    
+    Vec3D x0(it->second->cen_x, it->second->cen_y, it->second->cen_z); //center of the base disk
+    Vec3D dir(it->second->nx, it->second->ny, it->second->nz);
+    dir /= dir.norm();
+    
+    double L = it->second->L; //cylinder height
+    double R = it->second->r; //cylinder radius
+    double tan_alpha = tan(it->second->opening_angle_degrees/180.0*acos(-1.0));//opening angle
+    double Hmax = R/tan_alpha;
+    double H = std::min(it->second->cone_height, Hmax); //cone's height
+    
+    GetBoundingBoxOfCylinderCone(x0, dir, R, L, tan_alpha, H, O, abc[0], abc[1], abc[2],
+                                 lmin_local, lmax_local);
+
+    for(int i=0; i<3; i++) {
+      if(lmin_local[i] < lmin[i])
+        lmin[i] = lmin_local[i]; 
+      if(lmax_local[i] > lmax[i])
+        lmax[i] = lmax_local[i];
+    }
+  }
+
+  // Go over cylinder-spheres (i.e. possibly with end cap(s))
+  for(auto it = iod_lat.cylindersphereMap.dataMap.begin(); it != iod_lat.cylindersphereMap.dataMap.end(); it++) {
+    if(it->second->inclusion == CylinderSphereData::EXTERIOR)
+      continue;
+
+    Vec3D x0(it->second->cen_x, it->second->cen_y, it->second->cen_z); //center of base disk
+    Vec3D dir(it->second->nx, it->second->ny, it->second->nz);
+    dir /= dir.norm();
+
+    double L = it->second->L; //cylinder height
+    double R = it->second->r; //cylinder & sphere's radius
+    bool front_cap = (it->second->front_cap == CylinderSphereData::On);
+    bool back_cap = (it->second->back_cap == CylinderSphereData::On);
+
+    GetBoundingBoxOfCylinderSphere(x0, dir, R, L, front_cap, back_cap, O, abc[0], abc[1],
+                                   abc[2], lmin_local, lmax_local);
+
+    for(int i=0; i<3; i++) {
+      if(lmin_local[i] < lmin[i])
+        lmin[i] = lmin_local[i]; 
+      if(lmax_local[i] > lmax[i])
+        lmax[i] = lmax_local[i];
+    }
+  }
+
+  // Go over spheres
+  for(auto it = iod_lat.sphereMap.dataMap.begin(); it != iod_lat.sphereMap.dataMap.end(); it++) {
+    if(it->second->inclusion == SphereData::EXTERIOR)
+      continue;
+
+    Vec3D x0(it->second->cen_x, it->second->cen_y, it->second->cen_z);
+    double R = it->second->radius;
+
+    GetBoundingBoxOfSphere(x0, R, O, abc[0], abc[1], abc[2],
+                           lmin_local, lmax_local);
+
+    for(int i=0; i<3; i++) {
+      if(lmin_local[i] < lmin[i])
+        lmin[i] = lmin_local[i]; 
+      if(lmax_local[i] > lmax[i])
+        lmax[i] = lmax_local[i];
+    }
+  }
+
+  // Go over parallelepipeds
+  for(auto it = iod_lat.parallelepipedMap.dataMap.begin(); 
+           it != iod_lat.parallelepipedMap.dataMap.end(); it++) {
+    if(it->second->inclusion == ParallelepipedData::EXTERIOR)
+      continue;
+
+    Vec3D x0(it->second->x0, it->second->y0, it->second->z0);
+    Vec3D oa(it->second->ax, it->second->ay, it->second->az);  oa -= x0;
+    Vec3D ob(it->second->bx, it->second->by, it->second->bz);  ob -= x0;
+    Vec3D oc(it->second->cx, it->second->cy, it->second->cz);  oc -= x0;
+
+    if(oa.norm()==0 || ob.norm()==0 || oc.norm()==0 || (oa^ob)*oc<=0.0) {
+      print_error("*** Error: Detected error in a user-specified parallelepiped. "
+                  "Overlapping vertices or violation of right-hand rule.\n");
+      exit_mpi();
+    }
+
+    GetBoundingBoxOfParallelepiped(x0, oa, ob, oc, O, abc[0], abc[1], abc[2],
+                                   lmin_local, lmax_local);
+
+    for(int i=0; i<3; i++) {
+      if(lmin_local[i] < lmin[i])
+        lmin[i] = lmin_local[i];
+      if(lmax_local[i] > lmax[i])
+        lmax[i] = lmax_local[i];
+    }
+  }
+
+  // Go over spheroids
+  for(auto it = iod_lat.spheroidMap.dataMap.begin(); it != iod_lat.spheroidMap.dataMap.end(); it++) {
+    if(it->second->inclusion == SpheroidData::EXTERIOR)
+      continue;
+
+    Vec3D x0(it->second->cen_x, it->second->cen_y, it->second->cen_z);
+    Vec3D axis(it->second->axis_x, it->second->axis_y, it->second->axis_z);
+    double semi_length = it->second->semi_length;
+    double r = it->second->radius;
+
+    GetBoundingBoxOfSpheroid(x0, axis, it->second->semi_length, it->second->radius, O,
+                             abc[0], abc[1], abc[2], lmin_local, lmax_local);
+
+    for(int i=0; i<3; i++) {
+      if(lmin_local[i] < lmin[i])
+        lmin[i] = lmin_local[i];
+      if(lmax_local[i] > lmax[i])
+        lmax[i] = lmax_local[i];
+    }
+  }
+
+  //Check user-specified custom geometry
+  if(geom_specifier) {
+    geom_specifier->GetBoundingBox(O, abc[0], abc[1], abc[2], lmin_local, lmax_local);
+    for(int i=0; i<3; i++) {
+      if(lmin_local[i] < lmin[i])
+        lmin[i] = lmin_local[i];
+      if(lmax_local[i] > lmax[i])
+        lmax[i] = lmax_local[i];
+    }
+  }
+
+
+  for(int i=0; i<3; i++) {
+    if(!isfinite(lmin[i]) || !isfinite(lmax[i]) || lmin[i]>=lmax[i]) {
+      print_error("*** Error: Unable to find a bounding box for lattice domain [%d]. Domain is unbounded.\n",
+                  lattice_id);
+      exit_mpi();
     }
   }
 
 }
 
 //---------------------------------------------------------------------
+
 
 //---------------------------------------------------------------------
 

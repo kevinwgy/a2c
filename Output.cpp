@@ -20,10 +20,10 @@ Output::Output(MPI_Comm &comm_, IoData& iod_)
   material_name.resize(nMaterials);
   for(auto it = iod.materialMap.dataMap.begin(); it != iod.materialMap.dataMap.end(); it++) {
     int matid = it->first;
-    if(strcmp(it->second.name, "")==0) //user did not specify a name
+    if(strcmp(it->second->name, "")==0) //user did not specify a name
       material_name[matid] = "Mat" + std::to_string(matid);
     else
-      material_name[matid] = it->second.name;
+      material_name[matid] = it->second->name;
   }
 
   // store lattice axes and origins
@@ -39,25 +39,25 @@ Output::Output(MPI_Comm &comm_, IoData& iod_)
   for(auto it = iod.latticeMap.dataMap.begin(); it != iod.latticeMap.dataMap.end(); it++) {
     int lattice_id = it->first;
 
-    axis_a[lattice_id][0] = it->second.ax;
-    axis_a[lattice_id][1] = it->second.ay;
-    axis_a[lattice_id][2] = it->second.az;
+    axis_a[lattice_id][0] = it->second->ax;
+    axis_a[lattice_id][1] = it->second->ay;
+    axis_a[lattice_id][2] = it->second->az;
 
-    axis_b[lattice_id][0] = it->second.bx;
-    axis_b[lattice_id][1] = it->second.by;
-    axis_b[lattice_id][2] = it->second.bz;
+    axis_b[lattice_id][0] = it->second->bx;
+    axis_b[lattice_id][1] = it->second->by;
+    axis_b[lattice_id][2] = it->second->bz;
 
-    axis_c[lattice_id][0] = it->second.cx;
-    axis_c[lattice_id][1] = it->second.cy;
-    axis_c[lattice_id][2] = it->second.cz;
+    axis_c[lattice_id][0] = it->second->cx;
+    axis_c[lattice_id][1] = it->second->cy;
+    axis_c[lattice_id][2] = it->second->cz;
 
-    origin[lattice_id][0] = it->second.ox;
-    origin[lattice_id][1] = it->second.oy;
-    origin[lattice_id][2] = it->second.oz;
+    origin[lattice_id][0] = it->second->ox;
+    origin[lattice_id][1] = it->second->oy;
+    origin[lattice_id][2] = it->second->oz;
 
-    periodic_a[lattice_id] = (it->second.periodic_a == LatticeData::TRUE) ? "T" : "F";
-    periodic_b[lattice_id] = (it->second.periodic_b == LatticeData::TRUE) ? "T" : "F";
-    periodic_c[lattice_id] = (it->second.periodic_c == LatticeData::TRUE) ? "T" : "F";
+    periodic_a[lattice_id] = (it->second->periodic_a == LatticeData::TRUE) ? "T" : "F";
+    periodic_b[lattice_id] = (it->second->periodic_b == LatticeData::TRUE) ? "T" : "F";
+    periodic_c[lattice_id] = (it->second->periodic_c == LatticeData::TRUE) ? "T" : "F";
   }
 
 
