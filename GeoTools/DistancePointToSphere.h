@@ -4,45 +4,41 @@
  ************************************************************************/
 #pragma once
 
-#include<GeoTools.h>
+#include<Vector3D.h>
 
 namespace GeoTools {
 
 /************************************************************
  * Calculate signed distance from an arbitrary point in 3D to a
- * plane.
+ * sphere.
  ***********************************************************/
 
-class DistanceFromPointToPlane {
+class DistanceFromPointToSphere{
 
-  Vec3D x0, dir; //!< a point on the plane, and the (normalized) normal direction
+  Vec3D x0; //!< center of the sphere 
+  double R; //!< radius of the sphere
 
 public:
 
   //! Constructor
-  DistanceFromPointToPlane(double *x0_, double *dir_) {
-    for(int i=0; i<3; i++) {
+  DistanceFromPointToSphere(double *x0_, double R_) : R(R_) {
+    for(int i=0; i<3; i++)
       x0[i]  = x0_[i];
-      dir[i] = dir_[i];
-    }
-    double norm = dir.norm();
-    assert(norm!=0.0);
-    dir /= norm;
   }
 
-  ~DistanceFromPointToPlane() {}
+  ~DistanceFromPointToSphere() {}
 
   //! Calculates the signed distance, including the projection point
   double Calculate(double *Q_, double *P = NULL) {
-    double dist = ProjectPointToPlane(*(Vec3D *)Q_, x0, dir, true);
+    Vec3D vec = *(Vec3D *)Q_ - x0;
+    double dist = vec.norm();
     if(P)
-      *(Vec3D *)P = *(Vec3D *)Q_ - dist*dir;
-    return dist;
+      *(Vec3D *)P = x0 + (dist==0.0 ? Vec3D(1.0,0.0,0.0) // arbitrary dir
+                                    : R*vec/dist);
+    return dist - R;
   }
 
 };
-
-
 
 
 

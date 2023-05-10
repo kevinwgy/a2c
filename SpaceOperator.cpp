@@ -70,7 +70,7 @@ SpaceOperator::CreateOneLattice(LatticeStructure &lat, LatticeData &iod_lat, Lat
     if(it->second.inclusion == CylinderConeData::EXTERIOR)
       continue;
     
-    Vec3D x0(it->second->cen_x, it->second->cen_y, it->second->cen_z);
+    Vec3D x0(it->second->cen_x, it->second->cen_y, it->second->cen_z); //center of the base disk
     Vec3D dir(it->second->nx, it->second->ny, it->second->nz);
     dir /= dir.norm();
     
@@ -80,7 +80,7 @@ SpaceOperator::CreateOneLattice(LatticeStructure &lat, LatticeData &iod_lat, Lat
     double Hmax = R/tan_alpha;
     double H = std::min(it->second->cone_height, Hmax); //cone's height
     
-    GeoTools::GetBoundingBoxOfCylinderCone(x0, dir, R, L, H, O, dirabc[0], dirabc[1], dirabc[2],
+    GeoTools::GetBoundingBoxOfCylinderCone(x0, dir, R, L, tan_alpha, H, O, dirabc[0], dirabc[1], dirabc[2],
                                            lmin_local, lmax_local, true); //dir have been normalized.
 
     for(int i=0; i<3; i++) {
@@ -96,7 +96,7 @@ SpaceOperator::CreateOneLattice(LatticeStructure &lat, LatticeData &iod_lat, Lat
     if(it->second.inclusion == CylinderSphereData::EXTERIOR)
       continue;
 
-    Vec3D x0(it->second->cen_x, it->second->cen_y, it->second->cen_z);
+    Vec3D x0(it->second->cen_x, it->second->cen_y, it->second->cen_z); //center of base disk
     Vec3D dir(it->second->nx, it->second->ny, it->second->nz);
     dir /= dir.norm();
 

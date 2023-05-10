@@ -281,9 +281,9 @@ Assigner *CylinderSphereData::getAssigner()
   new ClassDouble<CylinderSphereData> (ca, "Axis_x", this, &CylinderSphereData::nx);
   new ClassDouble<CylinderSphereData> (ca, "Axis_y", this, &CylinderSphereData::ny);
   new ClassDouble<CylinderSphereData> (ca, "Axis_z", this, &CylinderSphereData::nz);
-  new ClassDouble<CylinderSphereData> (ca, "CylinderCenter_x", this, &CylinderSphereData::cen_x);
-  new ClassDouble<CylinderSphereData> (ca, "CylinderCenter_y", this, &CylinderSphereData::cen_y);
-  new ClassDouble<CylinderSphereData> (ca, "CylinderCenter_z", this, &CylinderSphereData::cen_z);
+  new ClassDouble<CylinderSphereData> (ca, "BaseCenter_x", this, &CylinderSphereData::cen_x);
+  new ClassDouble<CylinderSphereData> (ca, "BaseCenter_y", this, &CylinderSphereData::cen_y);
+  new ClassDouble<CylinderSphereData> (ca, "BaseCenter_z", this, &CylinderSphereData::cen_z);
   new ClassDouble<CylinderSphereData> (ca, "CylinderRadius", this, &CylinderSphereData::r);
   new ClassDouble<CylinderSphereData> (ca, "CylinderHeight", this, &CylinderSphereData::L);
   new ClassToken<CylinderSphereData> (ca, "FrontSphericalCap", this,
