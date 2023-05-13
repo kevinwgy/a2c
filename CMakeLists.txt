@@ -50,6 +50,7 @@ ADD_CUSTOM_COMMAND(
 # add include and link directories 
 include_directories("${CMAKE_SOURCE_DIR}")
 include_directories(${CMAKE_SOURCE_DIR}/GeoTools)
+include_directories(${CMAKE_SOURCE_DIR}/ComTools)
 link_directories(${CMAKE_SOURCE_DIR}/parser)
 
 # compile the parser
@@ -68,6 +69,7 @@ LatticeVariables.cpp
 Output.cpp
 Utils.cpp
 MaterialOperator.cpp
+SpaceInitializer.cpp
 SpaceOperator.cpp
 boundaryconditions.cpp
 calculateresults.cpp
@@ -80,6 +82,7 @@ quadrature.cpp
 readresults.cpp
 GeoTools/BoundingBoxes.cpp
 GeoTools/GeoTools.cpp
+ComTools/CommunicationTools.cpp
 )
 
 

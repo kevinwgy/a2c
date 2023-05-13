@@ -1,5 +1,6 @@
-#include <iostream>
 #include <IoData.h>
+#include <Utils.h>
+#include <cassert>
 
 //------------------------------------------------------------------------------
 
@@ -338,22 +339,83 @@ void CustomGeometryData::setup(const char *name)
 
 //---------------------------------------------------------
 
+GlobalSpeciesData::GlobalSpeciesData()
+{
+  name = "";
+}
+
+//---------------------------------------------------------
+
+Assigner *GlobalSpeciesData::getAssigner()
+{
+  ClassAssigner *ca = new ClassAssigner("normal", 1, nullAssigner);
+
+  new ClassStr<GlobalSpeciesData> (ca, "SpeciesName", this, &GlobalSpeciesData::name);
+}
+
+//---------------------------------------------------------
+
+LocalSpeciesData::LocalSpeciesData()
+{
+  //These default values are "invalid" on purpose --> meaning the user did not specify them
+  speciesID = -1;
+  molar_fraction = -1.0e-3;
+  min_molar_fraction = -1.0e-4;
+
+  diffusive = TRUE;
+}
+
+//---------------------------------------------------------
+
+Assigner *LocalSpeciesData::getAssigner()
+{
+
+  ClassAssigner *ca = new ClassAssigner("normal", 4, nullAssigner);
+
+  new ClassInt<LocalSpeciesData> (ca, "SpeciesID", this, &LocalSpeciesData::speciesID);
+
+  new ClassToken<LocalSpeciesData>(ca, "Diffusive", this,
+                                   reinterpret_cast<int LocalSpeciesData::*>(&LocalSpeciesData::diffusive), 2,
+                                   "False", 0, "True", 1);
+
+  new ClassDouble<LocalSpeciesData> (ca, "MolarFraction", this, &LocalSpeciesData::molar_fraction);
+
+  new ClassDouble<LocalSpeciesData> (ca, "MinimumMolarFraction", this, &LocalSpeciesData::min_molar_fraction);
+
+}
+
+//---------------------------------------------------------
+
 LatticeSiteData::LatticeSiteData()
 {
   la = lb = lc = -1.0;
   materialid = -1;
+
+  atomic_frequency = -1.0; //using an invalid value as default
+  mean_displacement_x = mean_displacement_y = mean_displacement_z = 0.0;
+  mean_momentum_x     = mean_momentum_y     = mean_momentum_z     = 0.0;
 }
 
 //---------------------------------------------------------
 
 Assigner *LatticeSiteData::getAssigner()
 {
-  ClassAssigner *ca = new ClassAssigner("normal", 4, nullAssigner);
+  ClassAssigner *ca = new ClassAssigner("normal", 12, nullAssigner);
 
   new ClassDouble<LatticeSiteData> (ca, "La", this, &LatticeSiteData::la);
   new ClassDouble<LatticeSiteData> (ca, "Lb", this, &LatticeSiteData::lb);
   new ClassDouble<LatticeSiteData> (ca, "Lc", this, &LatticeSiteData::lc);
   new ClassInt<LatticeSiteData> (ca, "MaterialID", this, &LatticeSiteData::materialid);
+
+  new ClassDouble<LatticeSiteData> (ca, "AtomicFrequency", this, &LatticeSiteData::atomic_frequency);
+  new ClassDouble<LatticeSiteData> (ca, "MeanDisplacementX", this, &LatticeSiteData::mean_displacement_x);
+  new ClassDouble<LatticeSiteData> (ca, "MeanDisplacementY", this, &LatticeSiteData::mean_displacement_y);
+  new ClassDouble<LatticeSiteData> (ca, "MeanDisplacementZ", this, &LatticeSiteData::mean_displacement_z);
+  new ClassDouble<LatticeSiteData> (ca, "MeanMomentumX", this, &LatticeSiteData::mean_momentum_x);
+  new ClassDouble<LatticeSiteData> (ca, "MeanMomentumY", this, &LatticeSiteData::mean_momentum_y);
+  new ClassDouble<LatticeSiteData> (ca, "MeanMomentumZ", this, &LatticeSiteData::mean_momentum_z);
+  
+  speciesMap.setup("LocalSpecies", ca);
 }
 
 //---------------------------------------------------------
@@ -420,37 +482,6 @@ Assigner *LatticeData::getAssigner()
 
 //---------------------------------------------------------
 
-SpeciesData::SpeciesData()
-{
-  id = -1;
-  name = "";
-  diffusive = TRUE;
-  molar_fraction = 1.0e-3;
-  min_molar_fraction = 1.0e-4;
-}
-
-//---------------------------------------------------------
-
-Assigner *SpeciesData::getAssigner()
-{
-
-  ClassAssigner *ca = new ClassAssigner("normal", 5, nullAssigner);
-
-  new ClassInt<SpeciesData> (ca, "ID", this, &SpeciesData::id);
-  new ClassStr<SpeciesData> (ca, "SpeciesName", this, &SpeciesData::name);
-
-  new ClassToken<SpeciesData>(ca, "Diffusive", this,
-                               reinterpret_cast<int SpeciesData::*>(&SpeciesData::diffusion), 2,
-                               "False", 0, "True", 1);
-
-  new ClassDouble<SpeciesData> (ca, "MolarFraction", this, &SpeciesData::molar_fraction);
-
-  new ClassDouble<SpeciesData> (ca, "MinimumMolarFraction", this, &SpeciesData::min_molar_fraction);
-
-}
-
-//---------------------------------------------------------
-
 InteratomicPotentialData::InteratomicPotentialData() 
 {
   filename = "";
@@ -478,26 +509,46 @@ void InteratomicPotentialData::setup(const char *name)
 MaterialData::MaterialData()
 {
   name = "";
+
+  species0 = species1 = species2 = species3 = species4 = species5 = species6 = 
+  species7 = species8 = species9 = species10 = species11 = -1; //invalid value as default
 }
 
 //---------------------------------------------------------
 
 Assigner *MaterialData::getAssigner()
 {
-  ClassAssigner *ca = new ClassAssigner(name, 3, 0);
+  ClassAssigner *ca = new ClassAssigner(name, 14, 0);
 
   new ClassStr<MaterialData> (ca, "MaterialName", this, &MaterialData::name);
 
-  speciesMap.setup("Species", ca);
+  new ClassInt<MaterialData> (ca, "Species0", this, &MaterialData::species0); 
+  new ClassInt<MaterialData> (ca, "Species1", this, &MaterialData::species1); 
+  new ClassInt<MaterialData> (ca, "Species2", this, &MaterialData::species2); 
+  new ClassInt<MaterialData> (ca, "Species3", this, &MaterialData::species3); 
+  new ClassInt<MaterialData> (ca, "Species4", this, &MaterialData::species4); 
+  new ClassInt<MaterialData> (ca, "Species5", this, &MaterialData::species5); 
+  new ClassInt<MaterialData> (ca, "Species6", this, &MaterialData::species6); 
+  new ClassInt<MaterialData> (ca, "Species7", this, &MaterialData::species7); 
+  new ClassInt<MaterialData> (ca, "Species8", this, &MaterialData::species8); 
+  new ClassInt<MaterialData> (ca, "Species9", this, &MaterialData::species9); 
+  new ClassInt<MaterialData> (ca, "Species10", this, &MaterialData::species10); 
+  new ClassInt<MaterialData> (ca, "Species11", this, &MaterialData::species11); 
 
   potential.setup("InteratomicPotential");
+
 }
 
 //---------------------------------------------------------
 
 RegionalIcData::RegionalIcData()
 {
-  atomic_frequency = 0.0; 
+  // a negative value means the user did not specify it
+  latticeID = -1;
+  materialID = -1;
+  siteID = -1;
+
+  atomic_frequency = -1.0; //using an invalid value as default
   mean_displacement_x = mean_displacement_y = mean_displacement_z = 0.0;
   mean_momentum_x     = mean_momentum_y     = mean_momentum_z     = 0.0;
 }
@@ -507,7 +558,7 @@ RegionalIcData::RegionalIcData()
 Assigner *RegionalIcData::getAssigner()
 {
 
-  ClassAssigner *ca = new ClassAssigner(name, 15, 0);
+  ClassAssigner *ca = new ClassAssigner(name, 18, 0);
 
   planeMap.setup("Plane", ca);
   sphereMap.setup("Sphere", ca);
@@ -518,15 +569,19 @@ Assigner *RegionalIcData::getAssigner()
 
   custom_geometry.setup("CustomGeometry", ca);
 
-  new ClassDouble<SpeciesData> (ca, "AtomicFrequency", this, &SpeciesData::atomic_frequency);
-  new ClassDouble<SpeciesData> (ca, "MeanDisplacementX", this, &SpeciesData::mean_displacement_x);
-  new ClassDouble<SpeciesData> (ca, "MeanDisplacementY", this, &SpeciesData::mean_displacement_y);
-  new ClassDouble<SpeciesData> (ca, "MeanDisplacementZ", this, &SpeciesData::mean_displacement_z);
-  new ClassDouble<SpeciesData> (ca, "MeanMomentumX", this, &SpeciesData::mean_momentum_x);
-  new ClassDouble<SpeciesData> (ca, "MeanMomentumY", this, &SpeciesData::mean_momentum_y);
-  new ClassDouble<SpeciesData> (ca, "MeanMomentumZ", this, &SpeciesData::mean_momentum_z);
+  new ClassInt<RegionalIcData> (ca, "LatticeID", this, &RegionalIcData::latticeID);
+  new ClassInt<RegionalIcData> (ca, "MaterialID", this, &RegionalIcData::materialID);
+  new ClassInt<RegionalIcData> (ca, "SiteID", this, &RegionalIcData::siteID);
 
-  speciesMap.setup("Species", ca);
+  new ClassDouble<RegionalIcData> (ca, "AtomicFrequency", this, &RegionalIcData::atomic_frequency);
+  new ClassDouble<RegionalIcData> (ca, "MeanDisplacementX", this, &RegionalIcData::mean_displacement_x);
+  new ClassDouble<RegionalIcData> (ca, "MeanDisplacementY", this, &RegionalIcData::mean_displacement_y);
+  new ClassDouble<RegionalIcData> (ca, "MeanDisplacementZ", this, &RegionalIcData::mean_displacement_z);
+  new ClassDouble<RegionalIcData> (ca, "MeanMomentumX", this, &RegionalIcData::mean_momentum_x);
+  new ClassDouble<RegionalIcData> (ca, "MeanMomentumY", this, &RegionalIcData::mean_momentum_y);
+  new ClassDouble<RegionalIcData> (ca, "MeanMomentumZ", this, &RegionalIcData::mean_momentum_z);
+
+  speciesMap.setup("LocalSpecies", ca);
 
 }
 
@@ -560,23 +615,52 @@ void DiffusionData::setup(const char *name)
 
 //---------------------------------------------------------
 
+
+ExplicitData::ExplicitData()
+{
+  type = RUNGE_KUTTA_2;
+}
+
+//---------------------------------------------------------
+
+void ExplicitData::setup(const char *name, ClassAssigner *father)
+{
+
+ ClassAssigner *ca = new ClassAssigner(name, 1, father);
+
+  new ClassToken<ExplicitData>
+    (ca, "Type", this,
+     reinterpret_cast<int ExplicitData::*>(&ExplicitData::type), 3,
+     "ForwardEuler", 0, "RungeKutta2", 1, "RungeKutta3", 2);
+
+}
+
+//---------------------------------------------------------
+
 TsData::TsData()
 {
-  dt = 1.0e-6; 
-  t_final = 0.01;
+  type = EXPLICIT;
+  maxIts = INT_MAX;
+  timestep = -1.0;
+  cfl = 0.5;
+  maxTime = 1e10;
 }
 
 //---------------------------------------------------------
 
 void TsData::setup(const char *name)
 {
- 
-  ClassAssigner *ca = new ClassAssigner(name, 2, 0);
+  ClassAssigner *ca = new ClassAssigner(name, 6, father);
 
-  new ClassDouble<TsData> (ca, "TimeStep", this, &TsData::dt);
+  new ClassToken<TsData>(ca, "Type", this,
+                         reinterpret_cast<int TsData::*>(&TsData::type), 2,
+                         "Explicit", 0, "Implicit", 1);
+  new ClassInt<TsData>(ca, "MaxIts", this, &TsData::maxIts);
+  new ClassDouble<TsData>(ca, "TimeStep", this, &TsData::timestep);
+  new ClassDouble<TsData>(ca, "CFL", this, &TsData::cfl);
+  new ClassDouble<TsData>(ca, "MaxTime", this, &TsData::maxTime);
 
-  new ClassDouble<TsData> (ca, "MaxTime", this, &TsData::t_final);
-
+  expl.setup("Explicit", ca);
 }
 
 //---------------------------------------------------------
@@ -686,11 +770,13 @@ void IoData::readCmdFile()
 
 void IoData::setupCmdFileVariables()
 {
-  ClassAssigner *ca = new ClassAssigner(name, 7, 0);
+  ClassAssigner *ca = new ClassAssigner(name, 8, 0);
 
   latticeMap.setup("Lattice", ca);
 
   materialMap.setup("Material", ca);
+
+  speciesMap.setup("Species", ca);
 
   icMap.setup("RegionalInitialCondition", ca);
 
@@ -705,6 +791,43 @@ void IoData::setupCmdFileVariables()
 
 //-----------------------------------------------------
 
+void IoData::finalize()
+{
+  assert(MaterialData::MAX_SPECIES==12);
+  for(auto&& mat : materialMap.dataMap) {
+    mat.second->species[0] = mat.second->species0;
+    mat.second->species[1] = mat.second->species1;
+    mat.second->species[2] = mat.second->species2;
+    mat.second->species[3] = mat.second->species3;
+    mat.second->species[4] = mat.second->species4;
+    mat.second->species[5] = mat.second->species5;
+    mat.second->species[6] = mat.second->species6;
+    mat.second->species[7] = mat.second->species7;
+    mat.second->species[8] = mat.second->species8;
+    mat.second->species[9] = mat.second->species9;
+    mat.second->species[10] = mat.second->species10;
+    mat.second->species[11] = mat.second->species11;
+
+    // figure out nSpecies
+    nSpecies = 0;
+    for(int i=0; i<MaterialData::MAX_SPECIES; i++) {
+      if(mat.second->species[i]>=0)
+        nSpecies++;
+      else
+        break;
+    }
+    if(nSpecies==0) {
+      print_error("*** Error: Material[%d] does not have any species.\n", mat.first);
+      exit_mpi();
+    }
+    for(int i=nSpecies; i<MaterialData::MAX_SPECIES; i++) {
+      if(mat.second->species[i]>=0) {
+        print_error("*** Error: Found gap(s) in Material[%d] species indices.\n", mat.first);
+        exit_mpi();
+      }
+    }
+  }
+}
 
 //-----------------------------------------------------
 

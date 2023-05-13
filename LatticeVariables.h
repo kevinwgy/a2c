@@ -22,18 +22,20 @@ public:
   std::vector<int> matid; //!< the material id of each 
 
   std::vector<Vec3D> l; //!< lattice coordinates (non-dimensional)
-
   std::vector<Vec3D> q; //!< mean position (NOT displacement)
   std::vector<Vec3D> q0; //!< initial mean position
-
 //  std::vector<Vec3D> p; //!< mean momentum
-
   std::vector<double> sigma; //!< atomic frequency
+  std::vector<int> subsurf; //!< 0 ~ not within subsurface; 1 ~ within subsurface
 
+  // Variables defined for each species
+  std::vector<std::vector<int> > diffusive; //!< (1/0) participates in mass exchange or not
+  std::vector<std::vector<int> > species_id; //!< species id
   std::vector<std::vector<double> > x; //!< molar fraction
   std::vector<std::vector<double> > gamma; //!< chemical potential
 
-  std::vector<int> subsurf; //!< 0 ~ not within subsurface; 1 ~ within subsurface
+  std::vector<std::vector<double> > xmin; //!< min molar fraction (from input)
+
 
 public:
 

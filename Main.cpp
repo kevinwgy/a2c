@@ -60,48 +60,67 @@ int main(int argc, char* argv[])
   // Inputs
   //--------------------------------------------------------------
   IoData iod(argc, argv);
+  iod.finalize();
   verbose = iod.output.verbose;
+
+  //------------------------------------------------------------------------
+  // Get global species ID & Name
+  //--------------------------------------------------------------
+  int nSpecies = iod.speciesMap.dataMap.size();
+  vector<string> global_species;
+  std::set<int> species_tracker; //for error detection only
+  for(auto&& sp : iod.speciesMap.dataMap)
+    int spid = sp.first;
+    if(spid<0 || spid>=nSpecies) {
+      print_error("*** Error: Detected error in global species index (id = %d).\n", spid);
+      exit_mpi();
+    }
+    species_tracker.insert(spid);
+    global_species[spid] = string(sp.second->name);
+  }
+  if(species_tracker.size() != nSpecies) {
+    print_error("*** Error: Detected error in global species indices.\n");
+    exit_mpi();
+  } 
 
   //--------------------------------------------------------------
   // Setup materials
   //--------------------------------------------------------------
-  vector<MaterialOperator> mato;
   int nMaterials = iod.materialMap.dataMap.size();
-  mato.resize(nMaterials);
+  vector<MaterialOperator> mato(nMaterials);
   std::set<int> material_tracker; //for error detection only
-  for(auto it = iod.materialMap.dataMap.begin(); it != iod.materialMap.dataMap.end(); it++) {
-    int matid = it->first;
-    if(matid<0 || matid>=(int)nMaterials) {
-      print_error("*** Error: Detected error in the specification of material index (id = %d).\n", matid);
+  for(auto&& mat : iod.materialMap.dataMap) {
+    int matid = mat.first;
+    if(matid<0 || matid>=nMaterials) {
+      print_error("*** Error: Detected error in material index (id = %d).\n", matid);
       exit_mpi();
     }
     material_tracker.insert(matid);
 
-    mato[matid].Setup(matid, it->second);
+    mato[matid].Setup(matid, *mat.second, global_species);
   }
   if(material_tracker.size() != nMaterials) {
-    print_error("*** Error: Detected error in the specification of material indices.\n");
+    print_error("*** Error: Detected error in material indices.\n");
     exit_mpi();
   } 
 
   //--------------------------------------------------------------
   // Setup lattice constants
   //--------------------------------------------------------------
-  vector<LatticeStructure> lats;
   int nLattices = iod.latticeMap.dataMap.size();
-  lats.resize(nLattices);
+  vector<LatticeStructure> lats(nLattices);
   std::set<int> lattice_tracker; //for error detection only
-  for(auto it = iod.latticeMap.dataMap.begin(); it != iod.latticeMap.dataMap.end(); it++) {
-    int lattice_id = it->first;
-    if(lattice_id<0 || lattice_id>=(int)nLattices) {
-      print_error("*** Error: Detected error in the specification of lattice index (id = %d).\n", lattice_id);
+  for(auto&& lat : iod.latticeMap.dataMap) {
+    int lattice_id = lat.first;
+    if(lattice_id<0 || lattice_id>=nLattices) {
+      print_error("*** Error: Detected error in lattice index (id = %d).\n", lattice_id);
       exit_mpi();
     }
     lattice_tracker.insert(lattice_id);
-    lats[lattice_id].Setup(lattice_id, it->second, nMaterials);
+    lats[lattice_id].Setup(lattice_id, *lat.second, nMaterials);
   }
   if(lattice_tracker.size() != nLattices) {
-    print_error("*** Error: Detected error in the specification of lattice indices.\n");
+    print_error("*** Error: Detected error in lattice indices.\n");
     exit_mpi();
   }
 
