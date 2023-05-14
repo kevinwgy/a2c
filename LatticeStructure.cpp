@@ -65,8 +65,15 @@ LatticeStructure::Setup(int lattice_id_, LatticeData &iod_lattice, int nMaterial
     print_error("*** Error: No lattice sites specified for Lattice[%d].\n", lattice_id);
     exit_mpi();
   }
+
   site_coords.resize(nSites);
   site_matid.resize(nSites);
+  site_dataMap_id.resize(nSites);
+  site_species_id.resize(nSites);
+  site_species_diff.resize(nSites);
+  site_species_x0.resize(nSites);
+  site_species_xmin.resize(nSites);
+  
   std::set<int> site_tracker;
   for(auto it = iod_lattice.siteMap.dataMap.begin(); it != iod_lattice.siteMap.dataMap.end(); it++) {
     int site_id = it->first;
@@ -87,12 +94,21 @@ LatticeStructure::Setup(int lattice_id_, LatticeData &iod_lattice, int nMaterial
       }
     }
 
+    site_dataMap_id[site_id] = it - iod_lattice.siteMap.dataMap.begin();
+
     site_matid[site_id] = it->second->materialid;
     if(site_matid[site_id]<0 || site_matid[site_id]>=nMaterials) {
       print_error("*** Error: Detected non-existent material id (%d) in Lattice[%d]->Site[%d].\n",
                   site_matid[site_id], lattice_id, site_id);
       exit_mpi();
     }
+
+    // work on the species of this site
+    I AM HERE
+  }
+  if(site_tracker.size() != nSites) {
+    print_error("*** Error: Detected duplicate Site IDs in Lattice[%d].\n", lattice_id);
+    exit_mpi();
   }
 
 }

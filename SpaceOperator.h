@@ -5,7 +5,6 @@
 #include<LatticeStructure.h>
 #include<MaterialOperator.h>
 #include<mpi.h>
-class SpaceInitializer;
 
 /****************************************************************************
  * class SpaceOperator is responsible for calculations in the spatial domain

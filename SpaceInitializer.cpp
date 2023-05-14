@@ -37,10 +37,6 @@ void
 SpaceInitializer::SetupLatticeVariables(vector<LatticeVariables> &LVS)
 {
 
-  //--------------------------------------------
-  // Step 1: Sort user-specified material data
-  //--------------------------------------------
-  
   int nLattices = iod.latticeMap.dataMap.size();
   if(LVS.size() != nLattices)
     LVS.resize(nLattices);
@@ -549,9 +545,10 @@ SpaceInitializer::CheckAndAddSitesInCell(int li, int lj, int lk, LatticeStructur
   Vec3D l, q;
   bool in, intersect;
   int counter = 0;
+  int nSites = lat.GetNumberOfSites();
  
-  for(int sid = 0; sid < (int)lat.site_coords.size(); sid++) {
-    l = lat.site_coords[sid] + Vec3D(li, lj, lk); //lattice coords
+  for(int sid = 0; sid < nSites; sid++) {
+    l = lat.GetCoordsOfSite(sid) + Vec3D(li, lj, lk); //lattice coords
     q = lat.GetXYZ(l); //(x,y,z) coords
 
     in = true; //always in R^3...
@@ -619,14 +616,20 @@ SpaceInitializer::CheckAndAddSitesInCell(int li, int lj, int lk, LatticeStructur
     }
 
     if(in) {//add to LV
+
       LV.l.push_back(l);
-      LV.q.push_back(q);
       LV.q0.push_back(q);
       LV.siteid.push_back(sid);
-      LV.matid.push_back(lat.site_matid[sid]);
+      LV.matid.push_back(lat.GetMatIDOfSite(sid));
 
-      LV.sigma.push_back(
+      LatticeSiteData &iod_site(*(iod_lattice.siteMap.dataMap.begin()+lat.GetDataMapIDOfSite(sid))->second);
+      LV.sigma.push_back(iod_site.atomic_frequency);
+      q[0] += iod_site.mean_displacement_x;
+      q[1] += iod_site.mean_displacement_y;
+      q[2] += iod_site.mean_displacement_z;
+      LV.q.push_back(q);
 
+      I AM HERE! 
 
 
 
