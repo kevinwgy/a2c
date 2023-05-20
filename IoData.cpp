@@ -362,7 +362,7 @@ LocalSpeciesData::LocalSpeciesData()
   molar_fraction = -1.0e-3;
   min_molar_fraction = -1.0e-4;
 
-  diffusive = TRUE;
+  diffusive = FALSE;
 }
 
 //---------------------------------------------------------
@@ -391,6 +391,8 @@ LatticeSiteData::LatticeSiteData()
   la = lb = lc = -1.0;
   materialid = -1;
 
+  tag = 0;
+
   atomic_frequency = -1.0; //using an invalid value as default
   mean_displacement_x = mean_displacement_y = mean_displacement_z = 0.0;
   mean_momentum_x     = mean_momentum_y     = mean_momentum_z     = 0.0;
@@ -400,12 +402,14 @@ LatticeSiteData::LatticeSiteData()
 
 Assigner *LatticeSiteData::getAssigner()
 {
-  ClassAssigner *ca = new ClassAssigner("normal", 12, nullAssigner);
+  ClassAssigner *ca = new ClassAssigner("normal", 13, nullAssigner);
 
   new ClassDouble<LatticeSiteData> (ca, "La", this, &LatticeSiteData::la);
   new ClassDouble<LatticeSiteData> (ca, "Lb", this, &LatticeSiteData::lb);
   new ClassDouble<LatticeSiteData> (ca, "Lc", this, &LatticeSiteData::lc);
   new ClassInt<LatticeSiteData> (ca, "MaterialID", this, &LatticeSiteData::materialid);
+
+  new ClassInt<LatticeSiteData> (ca, "Tag", this, &LatticeSiteData::tag);
 
   new ClassDouble<LatticeSiteData> (ca, "AtomicFrequency", this, &LatticeSiteData::atomic_frequency);
   new ClassDouble<LatticeSiteData> (ca, "MeanDisplacementX", this, &LatticeSiteData::mean_displacement_x);
@@ -512,13 +516,15 @@ MaterialData::MaterialData()
 
   species0 = species1 = species2 = species3 = species4 = species5 = species6 = 
   species7 = species8 = species9 = species10 = species11 = -1; //invalid value as default
+
+  min_molar_fraction = 0.0;
 }
 
 //---------------------------------------------------------
 
 Assigner *MaterialData::getAssigner()
 {
-  ClassAssigner *ca = new ClassAssigner(name, 14, 0);
+  ClassAssigner *ca = new ClassAssigner(name, 15, 0);
 
   new ClassStr<MaterialData> (ca, "MaterialName", this, &MaterialData::name);
 
@@ -535,6 +541,8 @@ Assigner *MaterialData::getAssigner()
   new ClassInt<MaterialData> (ca, "Species10", this, &MaterialData::species10); 
   new ClassInt<MaterialData> (ca, "Species11", this, &MaterialData::species11); 
 
+  new ClassDouble<MaterialData> (ca, "MinimumMolarFraction", this, &MaterialData::min_molar_fraction);
+
   potential.setup("InteratomicPotential");
 
 }
@@ -547,6 +555,8 @@ RegionalIcData::RegionalIcData()
   latticeID = -1;
   materialID = -1;
   siteID = -1;
+
+  tag = 0;
 
   atomic_frequency = -1.0; //using an invalid value as default
   mean_displacement_x = mean_displacement_y = mean_displacement_z = 0.0;
@@ -573,6 +583,7 @@ Assigner *RegionalIcData::getAssigner()
   new ClassInt<RegionalIcData> (ca, "MaterialID", this, &RegionalIcData::materialID);
   new ClassInt<RegionalIcData> (ca, "SiteID", this, &RegionalIcData::siteID);
 
+  new ClassInt<RegionalIcData> (ca, "Tag", this, &RegionalIcData::tag);
   new ClassDouble<RegionalIcData> (ca, "AtomicFrequency", this, &RegionalIcData::atomic_frequency);
   new ClassDouble<RegionalIcData> (ca, "MeanDisplacementX", this, &RegionalIcData::mean_displacement_x);
   new ClassDouble<RegionalIcData> (ca, "MeanDisplacementY", this, &RegionalIcData::mean_displacement_y);

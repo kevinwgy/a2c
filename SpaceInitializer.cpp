@@ -214,8 +214,19 @@ END_OF_ASSIGNMENT:
   CommunicationTools::AllGatherVector<Vec3D>(comm, LV.l);
   CommunicationTools::AllGatherVector<Vec3D>(comm, LV.q);
   CommunicationTools::AllGatherVector<Vec3D>(comm, LV.q0);
+  CommunicationTools::AllGatherVector<double>(comm, LV.sigma);
+  CommunicationTools::AllGatherVector<int>(comm, LV.subsurf);
+
+  CommunicationTools::AllGatherVectorOfVectors<int>(comm, LV.diffusive);
+  CommunicationTools::AllGatherVectorOfVectors<int>(comm, LV.species_id);
+  CommunicationTools::AllGatherVectorOfVectors<double>(comm, LV.x);
+  CommunicationTools::AllGatherVectorOfVectors<double>(comm, LV.gamma);
+  CommunicationTools::AllGatherVectorOfVectors<double>(comm, LV.xmin);
+  
+
   LV.size = LV.q.size();
   
+  LV.nSpecies_max = lat.GetMaxNumberOfSpeciesPerSite();
 
   //----------------------------------------------------------------
   // Clean-up
@@ -620,7 +631,9 @@ SpaceInitializer::CheckAndAddSitesInCell(int li, int lj, int lk, LatticeStructur
       LV.l.push_back(l);
       LV.q0.push_back(q);
       LV.siteid.push_back(sid);
-      LV.matid.push_back(lat.GetMatIDOfSite(sid));
+
+      int matid = lat.GetMatIDOfSite(sid);
+      LV.matid.push_back(matid);
 
       LatticeSiteData &iod_site(*(iod_lattice.siteMap.dataMap.begin()+lat.GetDataMapIDOfSite(sid))->second);
       LV.sigma.push_back(iod_site.atomic_frequency);
@@ -629,12 +642,16 @@ SpaceInitializer::CheckAndAddSitesInCell(int li, int lj, int lk, LatticeStructur
       q[2] += iod_site.mean_displacement_z;
       LV.q.push_back(q);
 
-      I AM HERE! 
+      LV.subsurf.push_back(iod_site.tag); //TODO: This tag can be generalized
 
-
+      LV.species_id.push_back(lat.site_species_id[sid]);
+      LV.diffusive.push_back(lat.site_species_diff[sid]);
+      LV.x.push_back(lat.site_species_x0[sid]);
+      LV.xmin.push_back(lat.site_species_xmin[sid]);
 
       LV.size++;
       counter++;
+
     }
   }
 

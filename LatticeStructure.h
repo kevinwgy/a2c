@@ -5,6 +5,7 @@
 #include<cassert>
 #include<cmath>
 struct LatticeData;
+struct MaterialOperator;
 
 /****************************************************************
  * Class LatticeStructure stores the information (not variables) of
@@ -33,6 +34,8 @@ class LatticeStructure
 
   std::vector<int>   site_dataMap_id; //!< the dataMap index (IoData) of each site
 
+  int nSpecies_max; //!< max number of species among the materials on this lattice
+
 public:
   // these vectors are "public"
   std::vector<std::vector<int> > site_species_id; //!< the (global) ID of each species of each site
@@ -46,7 +49,8 @@ public:
   LatticeStructure();
   ~LatticeStructure();
 
-  void Setup(int lattice_id_, LatticeData &iod_lattice, int nMaterials);
+  void Setup(int lattice_id_, LatticeData &iod_lattice, std::vector<MaterialOperator> &mato,
+             int nSpecies);
 
   inline int GetLatticeID() {return lattice_id;}
   inline Vec3D GetLatticeOrigin() {return o;}
@@ -59,6 +63,8 @@ public:
   inline int GetNumberOfSites() {return site_coords.size();}
   inline Vec3D GetCoordsOfSite(int p) {assert(p>=0 && p<(int)site_coords.size()); return site_coords[p];}
   inline Vec3D GetMatIDOfSite(int p) {assert(p>=0 && p<(int)site_matid.size()); return site_matid[p];}
+
+  inline int GetMaxNumberOfSpeciesPerSite() {return nSpecies_max;}
 
   inline Vec3D GetDataMapIDOfSite(int p) {assert(p>=0 && p<(int)site_matid.size()); return site_dataMap_id[p];}
 

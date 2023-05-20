@@ -223,6 +223,9 @@ struct LatticeSiteData
   //! For specifying the initial conditions for certain species
   ObjectMap<LocalSpeciesData> speciesMap; 
     
+  //! tag
+  int tag;
+  
   //! Initial site condition
   double atomic_frequency; //!< initial value (optional)
   double mean_displacement_x; //!< initial value (optional)
@@ -300,6 +303,8 @@ struct MaterialData
   int species[MAX_SPECIES];
   int nSpecies;
 
+  double min_molar_fraction; //default min for all the species of the material
+
   InteratomicPotentialData potential;
 
   MaterialData();
@@ -328,6 +333,9 @@ struct RegionalIcData
   //! For specifying the initial conditions for certain species
   ObjectMap<LocalSpeciesData> speciesMap; 
     
+  //! Tag
+  int tag;
+
   double atomic_frequency; //!< initial value (optional)
   double mean_displacement_x; //!< initial value (optional)
   double mean_displacement_y;

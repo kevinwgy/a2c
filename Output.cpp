@@ -217,11 +217,7 @@ Output::OutputSolutionOnLatticeVTP(double time, int lattice_id, LatticeVariables
   print(vtpfile, "        </DataArray>\n");
 
   
-  int ns = 0; //number of species (max)
-  for(auto&& xloc : LV.x) {
-    if(ns<(int)xloc.size())
-      ns = xloc.size();
-  }
+  int ns = LV.nSpecies_max; //number of species (max)
   assert(ns>0);
 
   // Write molar fraction
@@ -346,11 +342,7 @@ Output::OutputSolutionOnLatticeXYZ(double time, int lattice_id, LatticeVariables
   print(xyzfile, "atomic_freq:R:1:"); //atomic frequency
   print(xyzfile, "subsurf:I:1:"); //subsurf 
 
-  int ns = 0; //number of species (max)
-  for(auto&& xloc : LV.x) {
-    if(ns<(int)xloc.size())
-      ns = xloc.size();
-  }
+  int ns = LV.nSpecies_max; //number of species (max)
   assert(ns>0);
 
   print(xyzfile, "molar_frac:R:%d:", ns);

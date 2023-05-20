@@ -4,7 +4,7 @@
 #include <Vector3D.h>
 
 /**********************************************
- * class Variables stores all the unknown
+ * class LatticeVariables stores all the unknown
  * spatial variables for one lattice. It is 
  * mainly a storage class, not responsible for 
  * computations.
@@ -29,6 +29,7 @@ public:
   std::vector<int> subsurf; //!< 0 ~ not within subsurface; 1 ~ within subsurface
 
   // Variables defined for each species
+  int nSpecies_max; //!< maximum number of species of the materials on this lattice
   std::vector<std::vector<int> > diffusive; //!< (1/0) participates in mass exchange or not
   std::vector<std::vector<int> > species_id; //!< species id
   std::vector<std::vector<double> > x; //!< molar fraction

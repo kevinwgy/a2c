@@ -1,5 +1,5 @@
 #include <LatticeStructure.h>
-#include <IoData.h>
+#include <MaterialOperator.h>
 #include <Utils.h>
 #include <iostream>
 #include <cmath>
@@ -20,7 +20,8 @@ LatticeStructure::~LatticeStructure()
 //-------------------------------------------------------------------------
 
 void
-LatticeStructure::Setup(int lattice_id_, LatticeData &iod_lattice, int nMaterials)
+LatticeStructure::Setup(int lattice_id_, LatticeData &iod_lattice, vector<MaterialOperator> &mato,
+		        int nSpecies)
 {
   lattice_id = lattice_id_;
 
@@ -74,6 +75,8 @@ LatticeStructure::Setup(int lattice_id_, LatticeData &iod_lattice, int nMaterial
   site_species_x0.resize(nSites);
   site_species_xmin.resize(nSites);
   
+  nSpecies_max = 0;
+
   std::set<int> site_tracker;
   for(auto it = iod_lattice.siteMap.dataMap.begin(); it != iod_lattice.siteMap.dataMap.end(); it++) {
     int site_id = it->first;
@@ -96,15 +99,51 @@ LatticeStructure::Setup(int lattice_id_, LatticeData &iod_lattice, int nMaterial
 
     site_dataMap_id[site_id] = it - iod_lattice.siteMap.dataMap.begin();
 
-    site_matid[site_id] = it->second->materialid;
-    if(site_matid[site_id]<0 || site_matid[site_id]>=nMaterials) {
+    int matid = it->second->materialid;
+    if(matid<0 || matid>=mato.size()) {
       print_error("*** Error: Detected non-existent material id (%d) in Lattice[%d]->Site[%d].\n",
                   site_matid[site_id], lattice_id, site_id);
       exit_mpi();
     }
+    site_matid[site_id] = matid;
 
-    // work on the species of this site
-    I AM HERE
+    // Initialize all the species of the material
+    int nMatSpecs = mato[matid].GetNumberOfSpecies();
+    for(int i=0; i<nMatSpecs; i++)
+      site_species_id[site_id].push_back(mato[matid].LocalToGlobalSpeciesID(i));
+    site_species_diff[site_id].resize(nMatSpecs, false); //by default, not diffuisive
+    site_species_x0[site_id].resize(nMatSpecs, mato[matid].GetMinMolarFraction());
+    site_species_xmin[site_id].resize(nMatSpecs, mato[matid].GetMinMolarFraction());
+
+    std::set<int> checker1, checker2; //for error detection only
+    for(auto&& sp : it->speciesMap.dataMap) {
+      int global_spid = sp.second->speciesID;
+      int local_spid  = mato[matid].GlobalToLocalSpeciesID(global_spid);
+      if(local_spid<0) {//couldn't find thie species
+        print_error("*** Error: Lattice[%d]->Site[%d] has species %d, which is not in its material (%d).\n",
+                    lattice_id, site_id, global_spid, matid);
+        exit_mpi();
+      }
+      site_species_diff[site_id][local_spid] = sp.second->diffusive==LocalSpeciesData::TRUE;
+      if(sp.second->molar_fraction>=0.0) //user specified this
+        site_species_x0[site_id][local_spid] = sp.second->molar_fraction;
+      if(sp.second->min_molar_fraction>=0.0) //user specified this
+        site_species_xmin[site_id][local_spid] = sp.second->min_molar_fraction;
+
+      checker1.insert(global_spid);
+      checker2.insert(sp.first);
+    }
+    if(checker1.size() != it->speciesMap.dataMap.size()) {
+      print_error("*** Error: Lattice[%d]->Site[%d] has duplicate (global) species.\n",
+                  lattice_id, site_id);
+      exit_mpi();
+    }
+    if(checker2.size() != it->speciesMap.dataMap.size()) {
+      print_error("*** Error: Lattice[%d]->Site[%d] has duplicate LocalSpecies indices.\n",
+                  lattice_id, site_id);
+      exit_mpi();
+    }
+
   }
   if(site_tracker.size() != nSites) {
     print_error("*** Error: Detected duplicate Site IDs in Lattice[%d].\n", lattice_id);

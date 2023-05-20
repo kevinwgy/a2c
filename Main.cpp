@@ -117,7 +117,7 @@ int main(int argc, char* argv[])
       exit_mpi();
     }
     lattice_tracker.insert(lattice_id);
-    lats[lattice_id].Setup(lattice_id, *lat.second, nMaterials);
+    lats[lattice_id].Setup(lattice_id, *lat.second, mato, nSpecies);
   }
   if(lattice_tracker.size() != nLattices) {
     print_error("*** Error: Detected error in lattice indices.\n");

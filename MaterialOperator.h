@@ -19,6 +19,8 @@ class MaterialOperator
   std::vector<std::pair<int, std::string> > species_l2g; //!< <global ID, name> of my species
   std::map<int, int> species_g2l; //!< global ID --> local species index
 
+  double xmin;
+
 public:
 
   MaterialOperator();
@@ -28,6 +30,8 @@ public:
 
   inline int GetMaterialID() {return material_id;}
   inline int GetNumberOfSpecies() {return species_l2g.size();}
+
+  inline double GetMinMolarFraction() {return default_xmin;}
 
   inline int LocalToGlobalSpeciesID(int local_id)
     {assert(local_id>=0 && local_id<(int)species_l2g.size()); return species_l2g[local_id].first;}

@@ -3,7 +3,7 @@
 //------------------------------------------------------------------------
 
 MaterialOperator::MaterialOperator() 
-                : material_id(-1), iod_mat_ptr(NULL)
+                : material_id(-1), iod_mat_ptr(NULL), xmin(-1.0)
 { }
 
 //------------------------------------------------------------------------
@@ -36,6 +36,14 @@ MaterialOperator::Setup(int material_id_, MaterialData &iod_mat, vector<string> 
     print_error("*** Error: Detected duplicate species IDs in Material[%d].\n", material_id); 
     exit_mpi();
   }
+
+  xmin = iod_mat_ptr->min_molar_fraction;
+  if(xmin<0.0) {
+    print_error("*** Error: Detected negative molar fraction (%e) in Material[%d].\n",
+                xmin, material_id);
+    exit_mpi();
+  }
+
 }
 
 //------------------------------------------------------------------------
