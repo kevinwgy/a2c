@@ -55,15 +55,15 @@ Output::Output(MPI_Comm &comm_, IoData& iod_)
     origin[lattice_id][1] = it->second->oy;
     origin[lattice_id][2] = it->second->oz;
 
-    periodic_a[lattice_id] = (it->second->periodic_a == LatticeData::TRUE) ? "T" : "F";
-    periodic_b[lattice_id] = (it->second->periodic_b == LatticeData::TRUE) ? "T" : "F";
-    periodic_c[lattice_id] = (it->second->periodic_c == LatticeData::TRUE) ? "T" : "F";
+    periodic_a[lattice_id] = (it->second->a_periodic == LatticeData::TRUE) ? "T" : "F";
+    periodic_b[lattice_id] = (it->second->b_periodic == LatticeData::TRUE) ? "T" : "F";
+    periodic_c[lattice_id] = (it->second->c_periodic == LatticeData::TRUE) ? "T" : "F";
   }
 
 
   // write the header of the pvd file if needed
-  if(iod.output.format == Output::VTP || iod.output.format == Output::VTP_and_XYZ) {
-    for(int lat=0; lat<(int)LVS.size(); lat++) {
+  if(iod.output.format == OutputData::VTP || iod.output.format == OutputData::VTP_and_XYZ) {
+    for(int lat=0; lat<(int)iod.latticeMap.dataMap.size(); lat++) {
       char f1[256];
       sprintf(f1, "%s%s_L%d.pvd", iod.output.prefix, iod.output.solution_filename_base, lat);
 
@@ -102,9 +102,9 @@ Output::OutputSolution(double time, double dt, int time_step, vector<LatticeVari
 {
   if(isTimeToWrite(time, dt, time_step, iod.output.frequency_dt, iod.output.frequency,
                    last_snapshot_time, force_write)) {
-    if(iod.output.format == Output::VTP || iod.output.format == Output::VTP_and_XYZ)
+    if(iod.output.format == OutputData::VTP || iod.output.format == OutputData::VTP_and_XYZ)
       OutputSolutionVTP(time, time_step, LVS);
-    else if(iod.output.format == Output::XYZ || iod.output.format == Output::VTP_and_XYZ)
+    else if(iod.output.format == OutputData::XYZ || iod.output.format == OutputData::VTP_and_XYZ)
       OutputSolutionXYZ(time, time_step, LVS);
 
     iFrame++;
@@ -200,11 +200,11 @@ Output::OutputSolutionOnLatticeVTP(double time, int lattice_id, LatticeVariables
     print(vtpfile, "%d ", id);
   print(vtpfile, "        </DataArray>\n");
 
-  // Write location (``subsurface'') id
-  print(vtpfile, "        <DataArray type=\"Int8\" NumberOfComponents=\"1\" Name=\"SubSurface\" format=\"ascii\">\n");
+  // Write tag 
+  print(vtpfile, "        <DataArray type=\"Int8\" NumberOfComponents=\"1\" Name=\"Tag\" format=\"ascii\">\n");
   print(vtpfile, "          ");
-  assert(LV.subsurf.size() == LV.q.size());
-  for(auto&& id : LV.subsurf)
+  assert(LV.tag.size() == LV.q.size());
+  for(auto&& id : LV.tag)
     print(vtpfile, "%d ", id);
   print(vtpfile, "        </DataArray>\n");
 
@@ -213,7 +213,7 @@ Output::OutputSolutionOnLatticeVTP(double time, int lattice_id, LatticeVariables
   print(vtpfile, "          ");
   assert(LV.sigma.size() == LV.q.size());
   for(auto&& sig : LV.sigma)
-    print(vtpfile, "%e ", sigma);
+    print(vtpfile, "%e ", sig);
   print(vtpfile, "        </DataArray>\n");
 
   
@@ -301,7 +301,7 @@ Output::OutputSolutionOnLatticeXYZ(double time, int lattice_id, LatticeVariables
   assert(LV.sigma.size() == np);
   assert(LV.x.size() == np);
   assert(LV.gamma.size() == np);
-  assert(LV.subsurf.size() == np);
+  assert(LV.tag.size() == np);
   assert(lattice_id>=0 && lattice_id<(int)axis_a.size());
 
 
@@ -340,7 +340,7 @@ Output::OutputSolutionOnLatticeXYZ(double time, int lattice_id, LatticeVariables
   print(xyzfile, "disp:R:3:"); //displacement (q-q0)
   print(xyzfile, "type:I:1:"); //site id
   print(xyzfile, "atomic_freq:R:1:"); //atomic frequency
-  print(xyzfile, "subsurf:I:1:"); //subsurf 
+  print(xyzfile, "tag:I:1:"); //tag
 
   int ns = LV.nSpecies_max; //number of species (max)
   assert(ns>0);
@@ -352,12 +352,12 @@ Output::OutputSolutionOnLatticeXYZ(double time, int lattice_id, LatticeVariables
 
 
   //Write results
-  for(int i=0; i<np; i++) {
+  for(int i=0; i<(int)np; i++) {
     print(xyzfile, "%16s  ", material_name[LV.matid[i]].c_str());
     print(xyzfile, "%16.10e  %16.10e  %16.10e  ", LV.q[i][0], LV.q[i][1], LV.q[i][2]);
     print(xyzfile, "%16.10e  %16.10e  %16.10e  ", 
           LV.q[i][0]-LV.q0[i][0], LV.q[i][1]-LV.q0[i][1], LV.q[i][2]-LV.q0[i][2]);
-    print(xyzfile, "%4d  %16.10e  %4d  ", LV.siteid[i], LV.sigma[i], LV.subsurf[i]);
+    print(xyzfile, "%4d  %16.10e  %4d  ", LV.siteid[i], LV.sigma[i], LV.tag[i]);
 
     int s = 0; 
     while(s<(int)LV.x.size()) 
@@ -377,7 +377,7 @@ Output::OutputSolutionOnLatticeXYZ(double time, int lattice_id, LatticeVariables
   fclose(xyzfile);
   delete xyzfile;
 
-  print("- Wrote solution on Lattice[%d] at %e to %s.\n", lattice_id, time, fname);
+  print("- Wrote solution on Lattice[%d] at %e to %s.\n", lattice_id, time, full_fname);
 }
 
 //--------------------------------------------------------------------------------

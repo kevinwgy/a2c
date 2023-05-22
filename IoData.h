@@ -284,7 +284,7 @@ struct InteratomicPotentialData
   InteratomicPotentialData();
   ~InteratomicPotentialData() {}
 
-  void setup(const char *);
+  void setup(const char *, ClassAssigner * = 0);
 };
 
 //------------------------------------------------------------------------------
@@ -333,7 +333,7 @@ struct RegionalIcData
   //! For specifying the initial conditions for certain species
   ObjectMap<LocalSpeciesData> speciesMap; 
     
-  //! Tag
+  //! Tag (Can be used to indicate subsurf layer, or something else)
   int tag;
 
   double atomic_frequency; //!< initial value (optional)
@@ -371,7 +371,7 @@ struct DiffusionData
   DiffusionData();
   ~DiffusionData() {}
 
-  void setup(const char *);
+  void setup(const char *, ClassAssigner * = 0);
 };
 
 //------------------------------------------------------------------------------
@@ -403,7 +403,7 @@ struct TsData
   TsData();
   ~TsData() {}
 
-  void setup(const char *);
+  void setup(const char *, ClassAssigner * = 0);
 };
 
 //------------------------------------------------------------------------------
@@ -423,7 +423,7 @@ struct OutputData
   OutputData();
   ~OutputData() {}
 
-  void setup(const char *);
+  void setup(const char *, ClassAssigner * = 0);
 };
 
 //------------------------------------------------------------------------------
@@ -440,7 +440,7 @@ struct RestartData
   RestartData();
   ~RestartData() {}
 
-  void setup(const char *);
+  void setup(const char *, ClassAssigner * = 0);
 };
 
 //------------------------------------------------------------------------------
@@ -472,7 +472,7 @@ public:
 
   IoData() {}
   IoData(int, char**);
-  ~Iodata() {}
+  ~IoData() {}
 
   void readCmdLine(int, char**);
   void readCmdFile();

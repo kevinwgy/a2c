@@ -4,6 +4,7 @@
 #include<string>
 #include<vector>
 #include<map>
+#include<cassert>
 
 /***************************************************************
  * class MaterialOperator is responsible for performing material-
@@ -26,17 +27,17 @@ public:
   MaterialOperator();
   ~MaterialOperator();
 
-  void Setup(int material_id_, MaterialData &iod_mat, std::vector<string> &global_species)
+  void Setup(int material_id_, MaterialData &iod_mat, std::vector<string> &global_species);
 
   inline int GetMaterialID() {return material_id;}
   inline int GetNumberOfSpecies() {return species_l2g.size();}
 
-  inline double GetMinMolarFraction() {return default_xmin;}
+  inline double GetMinMolarFraction() {return xmin;}
 
   inline int LocalToGlobalSpeciesID(int local_id)
     {assert(local_id>=0 && local_id<(int)species_l2g.size()); return species_l2g[local_id].first;}
   inline int GlobalToLocalSpeciesID(int global_id)
-    {auto it = species_g2l.find(global_id); return it==species_g2l.end() ? -1 it->second;}
+    {auto it = species_g2l.find(global_id); return it==species_g2l.end() ? -1 : it->second;}
   inline string GetSpeciesNameByLocalID(int local_id)
     {assert(local_id>=0 && local_id<(int)species_l2g.size()); return species_l2g[local_id].second;}
 

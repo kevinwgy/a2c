@@ -6,6 +6,8 @@
 #include<MaterialOperator.h>
 #include<mpi.h>
 
+class LatticeVariables;
+
 /****************************************************************************
  * class SpaceOperator is responsible for calculations in the spatial domain
  ***************************************************************************/

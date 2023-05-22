@@ -1,6 +1,9 @@
 #include <IoData.h>
 #include <Utils.h>
 #include <cassert>
+#include <climits>
+
+RootClassAssigner *nullAssigner = new RootClassAssigner;
 
 //------------------------------------------------------------------------------
 
@@ -322,9 +325,9 @@ CustomGeometryData::CustomGeometryData()
 
 //---------------------------------------------------------
 
-void CustomGeometryData::setup(const char *name)
+void CustomGeometryData::setup(const char *name, ClassAssigner *father)
 {
-  ClassAssigner *ca = new ClassAssigner(name, 4, 0);
+  ClassAssigner *ca = new ClassAssigner(name, 4, father);
 
   new ClassStr<CustomGeometryData> (ca, "GeometrySpecifier", this, &CustomGeometryData::specifier);
 
@@ -351,6 +354,8 @@ Assigner *GlobalSpeciesData::getAssigner()
   ClassAssigner *ca = new ClassAssigner("normal", 1, nullAssigner);
 
   new ClassStr<GlobalSpeciesData> (ca, "SpeciesName", this, &GlobalSpeciesData::name);
+
+  return ca;
 }
 
 //---------------------------------------------------------
@@ -381,6 +386,8 @@ Assigner *LocalSpeciesData::getAssigner()
   new ClassDouble<LocalSpeciesData> (ca, "MolarFraction", this, &LocalSpeciesData::molar_fraction);
 
   new ClassDouble<LocalSpeciesData> (ca, "MinimumMolarFraction", this, &LocalSpeciesData::min_molar_fraction);
+
+  return ca;
 
 }
 
@@ -420,6 +427,8 @@ Assigner *LatticeSiteData::getAssigner()
   new ClassDouble<LatticeSiteData> (ca, "MeanMomentumZ", this, &LatticeSiteData::mean_momentum_z);
   
   speciesMap.setup("LocalSpecies", ca);
+
+  return ca;
 }
 
 //---------------------------------------------------------
@@ -443,11 +452,11 @@ LatticeData::LatticeData()
 Assigner *LatticeData::getAssigner()
 {
 
-  ClassAssigner *ca = new ClassAssigner(name, 24, 0);
+  ClassAssigner *ca = new ClassAssigner("normal", 24, 0);
 
   planeMap.setup("Plane", ca);
   sphereMap.setup("Sphere", ca);
-  parallelepiped.setup("Parallelepiped", ca);
+  parallelepipedMap.setup("Parallelepiped", ca);
   spheroidMap.setup("Spheroid", ca);
   cylinderconeMap.setup("CylinderAndCone", ca);
   cylindersphereMap.setup("CylinderWithSphericalCaps", ca);
@@ -482,6 +491,7 @@ Assigner *LatticeData::getAssigner()
 
   new ClassDouble<LatticeData> (ca, "MinDistance", this, &LatticeData::dmin);
   
+  return ca;
 }
 
 //---------------------------------------------------------
@@ -495,10 +505,10 @@ InteratomicPotentialData::InteratomicPotentialData()
 
 //---------------------------------------------------------
 
-void InteratomicPotentialData::setup(const char *name)
+void InteratomicPotentialData::setup(const char *name, ClassAssigner *father)
 {
  
-  ClassAssigner *ca = new ClassAssigner(name, 3, 0);
+  ClassAssigner *ca = new ClassAssigner(name, 3, father);
 
   new ClassStr<InteratomicPotentialData> (ca, "File", this, &InteratomicPotentialData::filename);
 
@@ -524,7 +534,7 @@ MaterialData::MaterialData()
 
 Assigner *MaterialData::getAssigner()
 {
-  ClassAssigner *ca = new ClassAssigner(name, 15, 0);
+  ClassAssigner *ca = new ClassAssigner("normal", 15, 0);
 
   new ClassStr<MaterialData> (ca, "MaterialName", this, &MaterialData::name);
 
@@ -545,6 +555,7 @@ Assigner *MaterialData::getAssigner()
 
   potential.setup("InteratomicPotential");
 
+  return ca;
 }
 
 //---------------------------------------------------------
@@ -568,11 +579,11 @@ RegionalIcData::RegionalIcData()
 Assigner *RegionalIcData::getAssigner()
 {
 
-  ClassAssigner *ca = new ClassAssigner(name, 18, 0);
+  ClassAssigner *ca = new ClassAssigner("normal", 18, 0);
 
   planeMap.setup("Plane", ca);
   sphereMap.setup("Sphere", ca);
-  parallelepiped.setup("Parallelepiped", ca);
+  parallelepipedMap.setup("Parallelepiped", ca);
   spheroidMap.setup("Spheroid", ca);
   cylinderconeMap.setup("CylinderAndCone", ca);
   cylindersphereMap.setup("CylinderWithSphericalCaps", ca);
@@ -594,6 +605,7 @@ Assigner *RegionalIcData::getAssigner()
 
   speciesMap.setup("LocalSpecies", ca);
 
+  return ca;
 }
 
 //---------------------------------------------------------
@@ -609,10 +621,10 @@ DiffusionData::DiffusionData()
 
 //---------------------------------------------------------
 
-void DiffusionData::setup(const char *name)
+void DiffusionData::setup(const char *name, ClassAssigner *father)
 {
  
-  ClassAssigner *ca = new ClassAssigner(name, 5, 0);
+  ClassAssigner *ca = new ClassAssigner(name, 5, father);
 
   new ClassDouble<DiffusionData> (ca, "Temperature", this, &DiffusionData::T0);
 
@@ -659,7 +671,7 @@ TsData::TsData()
 
 //---------------------------------------------------------
 
-void TsData::setup(const char *name)
+void TsData::setup(const char *name, ClassAssigner *father)
 {
   ClassAssigner *ca = new ClassAssigner(name, 6, father);
 
@@ -688,10 +700,10 @@ OutputData::OutputData()
 
 //---------------------------------------------------------
 
-void OutputData::setup(const char *name)
+void OutputData::setup(const char *name, ClassAssigner *father)
 {
 
-  ClassAssigner *ca = new ClassAssigner(name, 6, 0);
+  ClassAssigner *ca = new ClassAssigner(name, 6, father);
 
   new ClassToken<OutputData>(ca, "Format", this,
                                reinterpret_cast<int OutputData::*>(&OutputData::format), 4,
@@ -721,10 +733,10 @@ RestartData::RestartData()
 
 //---------------------------------------------------------
 
-void RestartData::setup(const char *name)
+void RestartData::setup(const char *name, ClassAssigner *father)
 {
 
-  ClassAssigner *ca = new ClassAssigner(name, 3, 0);
+  ClassAssigner *ca = new ClassAssigner(name, 3, father);
 
   new ClassInt<RestartData> (ca, "FileNum", this, &RestartData::restart_file_num); 
 
@@ -781,7 +793,7 @@ void IoData::readCmdFile()
 
 void IoData::setupCmdFileVariables()
 {
-  ClassAssigner *ca = new ClassAssigner(name, 8, 0);
+  ClassAssigner *ca = new ClassAssigner("normal", 8, 0);
 
   latticeMap.setup("Lattice", ca);
 
@@ -791,7 +803,7 @@ void IoData::setupCmdFileVariables()
 
   icMap.setup("RegionalInitialCondition", ca);
 
-  diffusion.seutp("Diffusion");
+  diffusion.setup("Diffusion");
 
   ts.setup("Time");
 
@@ -820,18 +832,18 @@ void IoData::finalize()
     mat.second->species[11] = mat.second->species11;
 
     // figure out nSpecies
-    nSpecies = 0;
+    mat.second->nSpecies = 0;
     for(int i=0; i<MaterialData::MAX_SPECIES; i++) {
       if(mat.second->species[i]>=0)
-        nSpecies++;
+        mat.second->nSpecies++;
       else
         break;
     }
-    if(nSpecies==0) {
+    if(mat.second->nSpecies==0) {
       print_error("*** Error: Material[%d] does not have any species.\n", mat.first);
       exit_mpi();
     }
-    for(int i=nSpecies; i<MaterialData::MAX_SPECIES; i++) {
+    for(int i=mat.second->nSpecies; i<MaterialData::MAX_SPECIES; i++) {
       if(mat.second->species[i]>=0) {
         print_error("*** Error: Found gap(s) in Material[%d] species indices.\n", mat.first);
         exit_mpi();

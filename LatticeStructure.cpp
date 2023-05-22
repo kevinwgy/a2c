@@ -3,11 +3,12 @@
 #include <Utils.h>
 #include <iostream>
 #include <cmath>
+#include <set>
 using std::vector;
 
 //-------------------------------------------------------------------------
 
-LatticeStructure::LatticeStructure() : lattice_id(-1)
+LatticeStructure::LatticeStructure() : lattice_id(-1), dmin(0.0)
 { 
   //nothing is done here. must call function "Setup" to setup.
 }
@@ -20,8 +21,7 @@ LatticeStructure::~LatticeStructure()
 //-------------------------------------------------------------------------
 
 void
-LatticeStructure::Setup(int lattice_id_, LatticeData &iod_lattice, vector<MaterialOperator> &mato,
-		        int nSpecies)
+LatticeStructure::Setup(int lattice_id_, LatticeData &iod_lattice, vector<MaterialOperator> &mato)
 {
   lattice_id = lattice_id_;
 
@@ -69,7 +69,6 @@ LatticeStructure::Setup(int lattice_id_, LatticeData &iod_lattice, vector<Materi
 
   site_coords.resize(nSites);
   site_matid.resize(nSites);
-  site_dataMap_id.resize(nSites);
   site_species_id.resize(nSites);
   site_species_diff.resize(nSites);
   site_species_x0.resize(nSites);
@@ -97,10 +96,8 @@ LatticeStructure::Setup(int lattice_id_, LatticeData &iod_lattice, vector<Materi
       }
     }
 
-    site_dataMap_id[site_id] = it - iod_lattice.siteMap.dataMap.begin();
-
     int matid = it->second->materialid;
-    if(matid<0 || matid>=mato.size()) {
+    if(matid<0 || matid>=(int)mato.size()) {
       print_error("*** Error: Detected non-existent material id (%d) in Lattice[%d]->Site[%d].\n",
                   site_matid[site_id], lattice_id, site_id);
       exit_mpi();
@@ -109,14 +106,17 @@ LatticeStructure::Setup(int lattice_id_, LatticeData &iod_lattice, vector<Materi
 
     // Initialize all the species of the material
     int nMatSpecs = mato[matid].GetNumberOfSpecies();
+    if(nMatSpecs>nSpecies_max)
+      nSpecies_max = nMatSpecs;
+
     for(int i=0; i<nMatSpecs; i++)
       site_species_id[site_id].push_back(mato[matid].LocalToGlobalSpeciesID(i));
-    site_species_diff[site_id].resize(nMatSpecs, false); //by default, not diffuisive
+    site_species_diff[site_id].resize(nMatSpecs, 0); //by default, not diffuisive
     site_species_x0[site_id].resize(nMatSpecs, mato[matid].GetMinMolarFraction());
     site_species_xmin[site_id].resize(nMatSpecs, mato[matid].GetMinMolarFraction());
 
     std::set<int> checker1, checker2; //for error detection only
-    for(auto&& sp : it->speciesMap.dataMap) {
+    for(auto&& sp : it->second->speciesMap.dataMap) {
       int global_spid = sp.second->speciesID;
       int local_spid  = mato[matid].GlobalToLocalSpeciesID(global_spid);
       if(local_spid<0) {//couldn't find thie species
@@ -124,7 +124,8 @@ LatticeStructure::Setup(int lattice_id_, LatticeData &iod_lattice, vector<Materi
                     lattice_id, site_id, global_spid, matid);
         exit_mpi();
       }
-      site_species_diff[site_id][local_spid] = sp.second->diffusive==LocalSpeciesData::TRUE;
+      site_species_diff[site_id][local_spid] = sp.second->diffusive==LocalSpeciesData::TRUE ?
+                                               1 : 0;
       if(sp.second->molar_fraction>=0.0) //user specified this
         site_species_x0[site_id][local_spid] = sp.second->molar_fraction;
       if(sp.second->min_molar_fraction>=0.0) //user specified this
@@ -133,19 +134,19 @@ LatticeStructure::Setup(int lattice_id_, LatticeData &iod_lattice, vector<Materi
       checker1.insert(global_spid);
       checker2.insert(sp.first);
     }
-    if(checker1.size() != it->speciesMap.dataMap.size()) {
+    if(checker1.size() != it->second->speciesMap.dataMap.size()) {
       print_error("*** Error: Lattice[%d]->Site[%d] has duplicate (global) species.\n",
                   lattice_id, site_id);
       exit_mpi();
     }
-    if(checker2.size() != it->speciesMap.dataMap.size()) {
+    if(checker2.size() != it->second->speciesMap.dataMap.size()) {
       print_error("*** Error: Lattice[%d]->Site[%d] has duplicate LocalSpecies indices.\n",
                   lattice_id, site_id);
       exit_mpi();
     }
 
   }
-  if(site_tracker.size() != nSites) {
+  if((int)site_tracker.size() != nSites) {
     print_error("*** Error: Detected duplicate Site IDs in Lattice[%d].\n", lattice_id);
     exit_mpi();
   }
@@ -161,7 +162,7 @@ LatticeStructure::GetLocalCoordsFromXYZ(Vec3D &xyz, Int3 *ijk)
   if(ijk) {
     for(int p=0; p<3; p++) {
       ijk[p] = floor(labc[p]);
-      labc[p] -= ijk[p];
+      labc[p] -= (*ijk)[p];
     }
   } else {
     for(int p=0; p<3; p++)
@@ -179,7 +180,7 @@ LatticeStructure::GetLocalCoordsFromLABC(Vec3D &labc, Int3 *ijk)
   if(ijk) {
     for(int p=0; p<3; p++) {
       ijk[p] = floor(labc[p]);
-      labc0[p] = labc[p] - ijk[p];
+      labc0[p] = labc[p] - (*ijk)[p];
     }
   }
   else { 

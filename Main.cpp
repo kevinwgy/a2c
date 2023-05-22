@@ -1,40 +1,15 @@
 /**********************************************************************************
- * Copyright © Kevin G. Wang, Xingsheng Sun, 2015
- * (1) Redistribution and use in source and binary forms, with or without modification,
- *     are permitted, provided that this copyright notice is retained.
- * (2) Use at your own risk.
+ * Copyright ©Xingsheng Sun, Kevin G. Wang, 2015
  **********************************************************************************/
 #include <Output.h>
 #include <SpaceOperator.h>
 #include <Utils.h>
+#include <set>
 using std::vector;
 
 int verbose;
 clock_t start_time;
 MPI_Comm a2c_comm;
-
-//--------------------------------------------------------------
-void initializeStateVariables(Input &input, vector<vector<Int3> > &SS1, vector<vector<Int3> > &SS2, 
-                              vector<Vec3D> &q_Pd0, vector<Vec3D> &q_H0, vector<double> &sigma_Pd0, 
-                              vector<double> &sigma_H0, vector<double> &x0, vector<double> &gamma, 
-                              vector<int> &PdSubsurf, vector<int> &HSubsurf, 
-                              double &gammabd, vector<int> &full_H); 
-int findNeighbors(double a_Pd, double rc, vector<Vec3D> &q_Pd0, vector<Vec3D> &q_H0, 
-                  vector<vector<int> > &PdPd, vector<vector<int> > &PdH, 
-                  vector<vector<int> > &HPd, vector<vector<int> > &HH);
-int enforceBoundaryConditions(Input &input, double dt, vector<Vec3D> &q_Pd0, vector<Vec3D> &q_H0,
-                              vector<double> &sigma_Pd0, vector<double> &sigma_H0, vector<double> &x0, 
-                              vector<double> &gamma, vector<int> &HSubsurf, double &gammabd, vector<int> &full_H);
-int integrateDiffusion(Input &input, double dt, vector<vector<int> > &HH1, vector<double> &gamma, vector<double> &x0, 
-                       vector<double> &x, vector<int> &full_H);
-int calculateMacroResults(vector<vector<int> > &PdPd, vector<vector<int> > &PdPdnum,
-                          vector<Vec3D> &q_Pd, vector<double> &x, vector<int> &PdSubsurf, vector<int> &HSubsurf, 
-                          double &xH, double &xHinterior);
-void readResults(Input &input, vector<Vec3D> &q_Pd0, vector<Vec3D> &q_H0, vector<double> &sigma_Pd0,
-                   vector<double> &sigma_H0, vector<double> &x0, vector<double> &gamma, vector<int> &full_H);
-void gaussianQuadrature(int dim, vector<vector<Vec3D> > &QP);
-//--------------------------------------------------------------
-
 
 //--------------------------------------------------------------
 // Main Function
@@ -69,7 +44,7 @@ int main(int argc, char* argv[])
   int nSpecies = iod.speciesMap.dataMap.size();
   vector<string> global_species;
   std::set<int> species_tracker; //for error detection only
-  for(auto&& sp : iod.speciesMap.dataMap)
+  for(auto&& sp : iod.speciesMap.dataMap) {
     int spid = sp.first;
     if(spid<0 || spid>=nSpecies) {
       print_error("*** Error: Detected error in global species index (id = %d).\n", spid);
@@ -78,7 +53,7 @@ int main(int argc, char* argv[])
     species_tracker.insert(spid);
     global_species[spid] = string(sp.second->name);
   }
-  if(species_tracker.size() != nSpecies) {
+  if((int)species_tracker.size() != nSpecies) {
     print_error("*** Error: Detected error in global species indices.\n");
     exit_mpi();
   } 
@@ -99,7 +74,7 @@ int main(int argc, char* argv[])
 
     mato[matid].Setup(matid, *mat.second, global_species);
   }
-  if(material_tracker.size() != nMaterials) {
+  if((int)material_tracker.size() != nMaterials) {
     print_error("*** Error: Detected error in material indices.\n");
     exit_mpi();
   } 
@@ -117,9 +92,9 @@ int main(int argc, char* argv[])
       exit_mpi();
     }
     lattice_tracker.insert(lattice_id);
-    lats[lattice_id].Setup(lattice_id, *lat.second, mato, nSpecies);
+    lats[lattice_id].Setup(lattice_id, *lat.second, mato);
   }
-  if(lattice_tracker.size() != nLattices) {
+  if((int)lattice_tracker.size() != nLattices) {
     print_error("*** Error: Detected error in lattice indices.\n");
     exit_mpi();
   }
@@ -136,368 +111,28 @@ int main(int argc, char* argv[])
   SpaceOperator spo(comm, iod, mato, lats);
   spo.SetupLatticeVariables(LVS);
 
-  //--------------------------------------------------------------
-  // Initialize state: atomic positions, vibration frequencies, H molar fractions
-  //--------------------------------------------------------------
-  vector<Vec3D> q_Pd0, q_H0;
-  vector<double> sigma_Pd0, sigma_H0, x0, gamma;
-  vector<int> PdSubsurf, HSubsurf, full_H;
-  double gammabd;
-
-  initializeStateVariables(input, SS1, SS2, q_Pd0, q_H0, sigma_Pd0, sigma_H0, x0, gamma, PdSubsurf, HSubsurf, gammabd, full_H); 
-
-  // write solution to file
-  output.output_solution(iFrame++, iTimeStep, q_Pd0, q_H0, sigma_Pd0, sigma_H0, x0, gamma, full_H);
-  MPI_Barrier(comm);
-  exit(-1);
 
 
-  if(!MPI_rank) {
-    cout << "- Initialized atomic sites and state variables. " << endl;
-    cout << "- Number of Pd sites: " << q_Pd0.size() << ". " << endl;
-    cout << "- Number of H sites: " << q_H0.size() << ". " << endl;
-    cout << "- Boundary conditions:" << endl;
-    cout << "    Nondimensional chemical potential: " << gammabd << "." << endl;
-    cout << "    Chemical potential: " << input.file.mubd << " eV." << endl;
-    cout << "    Subsurface thickness: " << input.file.t_subsurf << " angstrom." << endl;
-    cout << "    Number of Pd sites in the subsurface: " << PdSubsurf.size() << ". " << endl;
-    cout << "    Number of H sites in the subsurface: " << HSubsurf.size() << ". " << endl;
-    cout.flush();
-  }
 
-  //--------------------------------------------------------------
-  // Initialize coefficients in correction term
-  //--------------------------------------------------------------
-  vector<double> coe_Pd, coe_H;
-/*
-  coe_Pd.push_back(0.0); //A_Pd
-  coe_Pd.push_back(1.0334e-07); //B_PdPdPd
-  coe_Pd.push_back(2.1336e-09); //B_PdPdH
-  coe_Pd.push_back(4.5629e-07); //B_PdHH
-
-  coe_H.push_back(0.0); //A_H
-  coe_H.push_back(1.6805e-06); //B_HPdPd
-  coe_H.push_back(1.8245e-08); //B_HPdH
-  coe_H.push_back(9.8190e-08); //B_HHH
-*/
-
-  coe_Pd.push_back(0.04); //A_Pd
-  coe_Pd.push_back(1.0334e-07); //B_PdPdPd
-  coe_Pd.push_back(2.1336e-09); //B_PdPdH
-  coe_Pd.push_back(4.5629e-07); //B_PdHH
-
-  coe_H.push_back(0.014); //A_H
-  coe_H.push_back(1.6805e-06); //B_HPdPd
-  coe_H.push_back(1.8245e-08); //B_HPdH
-  coe_H.push_back(9.8190e-08); //B_HHH
-
-  //--------------------------------------------------------------
-  // Find neighbors of each atom within cut-off distance rc
-  // Note: This algorithm does NOT rely on shells or the (i,j,k) indices. Hence allows amorphous layers
-  //--------------------------------------------------------------
-  double ext_dist = 1.5;
-  double rc_ext = input.file.rc + ext_dist;
-  vector<vector<int> > PdPd_ext;
-  vector<vector<int> > PdH_ext; 
-  vector<vector<int> > HPd_ext; 
-  vector<vector<int> > HH_ext; 
- 
-  int maxNeighbors_ext = findNeighbors(input.file.a_Pd, rc_ext, q_Pd0, q_H0, PdPd_ext, PdH_ext, HPd_ext, HH_ext);
-
-  if(!MPI_rank) {
-    cout << "- Done with extended neighbor search using a KDTree. " << endl;
-    cout << "  Extented radius: " << rc_ext << ". Max. number of neighbors: " << maxNeighbors_ext << ". " << endl;
-    cout.flush();}
-
-  //--------------------------------------------------------------
-  // Calculate Gaussian Quadrature points and weights with 6 variables
-  //--------------------------------------------------------------
-  vector<vector<Vec3D> > QPp; // for function with 6 variables.
-  gaussianQuadrature(3*2, QPp);
-  double QWp = 0.5/(3.0*2.0);
-
-  //--------------------------------------------------------------
-  // Initialize optimization solver
-  //--------------------------------------------------------------
-  vector<vector<int> > PdPd;//Pd neighbors of Pd;
-  vector<vector<int> > PdH; //H neighbors of Pd;
-  vector<vector<int> > HPd; //Pd neighbors of H;
-  vector<vector<int> > HH;  // H neighbors of H;
-  vector<vector<int> > PdPdnum;  // number of Pd neighbors on different shells, for local lattice constant;
-  vector<vector<int> > HH1;  // first H neighbor shell of H, for diffusion;
-  [[maybe_unused]] int err = 0; //error code
-
-  Minimizer minimizer(&argc, &argv);
-
-  int maxNeighbors = 0;
-
-/*
-if(!MPI_rank) {
-//    for (int i=0; i<PdPd.size(); i++)
-//        cout << i << " " << PdPd[i].size()+PdH[i].size() << endl;
-  //  for (int i=0; i<HPd.size(); i++)
-    //    cout << i << " " << HPd[i].size()+HH[i].size() << endl;
-    cout.flush();}
-*/
-
-  //--------------------------------------------------------------
-  // open file to write average H/Pd ratio and lattice constant
-  //--------------------------------------------------------------
-  ofstream result_file("Result.txt", ios::app);
-  if(!result_file){
-    cerr << "WARNING! Cannot open the Result file!" <<  endl;
-  }
-
-  //--------------------------------------------------------------
-  // Check start or restart for initialization
-  //--------------------------------------------------------------
-  int iFrame = 0;
-  int iTimeStep = 0;
-  [[maybe_unused]] int startTimeStep = 0;
-  double t = 0.0; //current simulation time
-  double free_entropy = 0.0;
-  double &dt = input.file.dt; // by XS
- 
-  vector<Vec3D> q_Pd(q_Pd0), q_H(q_H0); //to be used for storing new states
-  vector<double> sigma_Pd(sigma_Pd0), sigma_H(sigma_H0), x(x0); //same as above
-  
-
-  double xH = 0.0;
-  double xHinterior = 0.0;
-
-  double xH0 = 10.0;
-
-  if (input.file.restart == 0) {
-    if(!MPI_rank) {
-      cout << "---------------------------------------" << endl;
-      cout << "- Attention: start a new calculation! -" << endl;
-      cout << "---------------------------------------" << endl;
-      cout.flush();
-    }
-
-    minimizer.initialize(&input, &PdPd, &PdH, &HPd, &HH, q_Pd0, q_H0, sigma_Pd0, sigma_H0, x0, &QPp, QWp, &coe_Pd, &coe_H);
-
-    err = minimizer.findLocalNeighbors(PdPd_ext, PdH_ext, HPd_ext, HH_ext, PdPd, PdH, HPd, HH, PdPdnum, HH1, maxNeighbors);
-    if(!MPI_rank) {
-      cout << "- Done with local neighbor search using a KDTree. Max. number of neighbors: " << maxNeighbors << ". " << endl;
-      cout.flush();}
-    MPI_Barrier(comm);
-
-    // Enforce boundary conditions
-    err = enforceBoundaryConditions(input, dt, q_Pd0, q_H0, sigma_Pd0, sigma_H0, x0, gamma, HSubsurf, gammabd, full_H);
-
-    if(!MPI_rank) {
-      cout << "- Done with Boundary Condition." << endl;
-      cout.flush();
-    }
-    MPI_Barrier(comm);
-
-    // Optimize the problem with initial condition
-    if(!MPI_rank) {
-      cout << "- Optimization for initialization: " << endl; cout.flush();}
-
-    err = minimizer.minimizeFreeEntropy(0.0, q_Pd0, q_H0, sigma_Pd0, sigma_H0, x0, q_Pd, q_H, sigma_Pd, sigma_H, free_entropy);
-    if(!MPI_rank){
-      cout << "- Done with Max-Ent." << endl;
-      cout.flush();
-    }
-    MPI_Barrier(comm);
-
-    q_Pd0 = q_Pd;
-    q_H0 = q_H;
-    sigma_Pd0 = sigma_Pd;
-    sigma_H0 = sigma_H;
-
-    err = minimizer.calculateChemicalPotential(x0, gammabd, gamma, full_H);
-    if(!MPI_rank) {
-      cout << "- Done with Chemical Potential." << endl;
-      cout.flush();
-    }
-    MPI_Barrier(comm);
-
-    err = calculateMacroResults(PdPd, PdPdnum, q_Pd0, x0, PdSubsurf, HSubsurf, xH, xHinterior);
-    // write time history of macroscropic results to file
-    if(!MPI_rank) {
-      result_file << "  " << scientific << t << "  " << scientific << xH << "  " << scientific << xHinterior << " " << scientific << free_entropy << endl;
-      result_file.flush();
-    }
-    // write solution to file
-    output.output_solution(iFrame++, iTimeStep, q_Pd0, q_H0, sigma_Pd0, sigma_H0, x0, gamma, full_H);
-    MPI_Barrier(comm);
-  }
-  else if (input.file.restart == 1) {
-    if(!MPI_rank) {
-      cout << "-------------------------------------------" << endl;
-      cout << "- Attention: restart the old calculation! -" << endl;
-      cout << "-------------------------------------------" << endl;
-      cout.flush();
-    }
-    iFrame = input.file.restart_file_num+1;
-    iTimeStep = input.file.restart_file_num*input.file.output_frequency; 
-    startTimeStep = iTimeStep;
-    t = input.file.restart_file_num*dt*input.file.output_frequency; 
-    readResults(input, q_Pd0, q_H0, sigma_Pd0, sigma_H0, x0, gamma, full_H);
-    MPI_Barrier(comm);
-    if(!MPI_rank) {
-      cout << "- Read restart input file: " << input.file.restart_file_num << "." << endl; cout.flush();}
-
-    minimizer.initialize(&input, &PdPd, &PdH, &HPd, &HH, q_Pd0, q_H0, sigma_Pd0, sigma_H0, x0, &QPp, QWp, &coe_Pd, &coe_H);
- 
-    err = minimizer.findLocalNeighbors(PdPd_ext, PdH_ext, HPd_ext, HH_ext, PdPd, PdH, HPd, HH, PdPdnum, HH1, maxNeighbors);
-    MPI_Barrier(comm);
-    if(!MPI_rank) {
-        cout << "- Done with local neighbor search using a KDTree. Max. number of neighbors: " << maxNeighbors << ". " << endl;
-        cout.flush();}
-  }
-  else {
-    if(!MPI_rank) {
-      cerr << "ERREOR! Wrong Restart in the input file!" <<  endl;
-      exit(-1);
-    }
-  }
-  
-  x = x0;
-
-  //--------------------------------------------------------------
-  // MAIN LOOP: Integration in time
-  //--------------------------------------------------------------
-  if(!MPI_rank) {
-    cout << endl;
-    cout << "----------------------------" << endl;
-    cout << "--       Main Loop        --" << endl;
-    cout << "----------------------------" << endl;
-    cout.flush();
-  }
-  
-  bool lastStep = false;//false;
-
-  while(!lastStep) {
-    t += dt;
-    iTimeStep++;
-    if(!MPI_rank) {
-      cout << endl;
-      cout << "* Time-Step " << iTimeStep << ". Time: " << t << endl; cout.flush();}
-
-    // check if this is the last time step
-    //  double dt = input.file.dt;
-    if(t >= input.file.t_final - 0.001*dt) {//last time step
-      lastStep = true;
-      //dt = input.file.t_final - t;
-    }
+  print("\n");
+  print("----------------------------\n");
+  print("--       Main Loop        --\n");
+  print("----------------------------\n");
+  double t = 0.0;
 
 
-    //--------------------------------------------------------------
-    // Enforce boundary conditions
-    // Update the boundary values in x
-    //--------------------------------------------------------------
-    err = enforceBoundaryConditions(input, dt, q_Pd0, q_H0, sigma_Pd0, sigma_H0, x0, gamma, HSubsurf, gammabd, full_H);
-
-    if(!MPI_rank) {
-      cout << "# Done with Boundary Condition." << endl;
-      cout.flush();
-    }
-    MPI_Barrier(comm);
+  print("\n");
+  print("\033[0;32m==========================================\033[0m\n");
+  print("\033[0;32m   NORMAL TERMINATION (t = %e)  \033[0m\n", t);
+  print("\033[0;32m==========================================\033[0m\n");
+  print("Total Computation Time: %f sec.\n", ((double)(clock()-start_time))/CLOCKS_PER_SEC);
+  print("\n");
 
 
-    //--------------------------------------------------------------
-    // Integrate discrete diffusion law for one time step
-    // Update x 
-    //--------------------------------------------------------------
-    err = integrateDiffusion(input, dt, HH1, gamma, x0, x, full_H);
-
-    if(!MPI_rank) {
-        cout << "# Done with Diffusion."  << endl;  cout.flush();}
-    MPI_Barrier(comm);
-    // update old states and advance in time
-    x0 = x;
-
-    //--------------------------------------------------------------
-    // Minimize grand-canonical free energy (equiv. to free entropy at constant T)  
-    // Update q_Pd, q_H, sigma_Pd, sigma_H
-    //--------------------------------------------------------------
-    free_entropy = 0.0;
-    err = minimizer.minimizeFreeEntropy(dt, q_Pd0, q_H0, sigma_Pd0, sigma_H0, x0, q_Pd, q_H, sigma_Pd, sigma_H, free_entropy);
-                                        //x should not get changed...
-    if(!MPI_rank){
-        cout << "# Done with Max-Ent." << endl;
-        cout.flush();
-    }
-    MPI_Barrier(comm);
-    // update old states and advance in time
-    q_Pd0     = q_Pd;
-    q_H0      = q_H;
-    sigma_Pd0 = sigma_Pd;
-    sigma_H0  = sigma_H;
-
-    err = minimizer.findLocalNeighbors(PdPd_ext, PdH_ext, HPd_ext, HH_ext, PdPd, PdH, HPd, HH, PdPdnum, HH1, maxNeighbors);
-          
-    if(!MPI_rank) {
-        cout << "# Done with local neighbor search using a KDTree. Max. number of neighbors: " << maxNeighbors << ". " << endl;
-        cout.flush();}
-    MPI_Barrier(comm);
-
-    //--------------------------------------------------------------
-    // Calculate chemical potential
-    // Update gamma
-    //--------------------------------------------------------------
-    err = minimizer.calculateChemicalPotential(x0, gammabd, gamma, full_H);
-
-    if(!MPI_rank) {
-      cout << "# Done with Chemical Potential." << endl;
-      cout << endl;
-      cout.flush();
-    }
-    MPI_Barrier(comm);
-/*
-    if(!MPI_rank) {
-     // for(int i=0; i<gamma.size();i++)
-     // cout << "site" << i << ": " << gamma[i] << " " << x0[i] << " " << HH[i].size() << endl;
-      cout << gammabd << " " << gamma[0] << " " << x0[0] << " " << HH[0].size() << " " << HH1[0].size() <<  endl;
-      cout << gammabd << " " << gamma[gamma.size()-1] << " " << x0[gamma.size()-1] << " " << HH[gamma.size()-1].size() << " " << HH1[gamma.size()-1].size() << endl;
-      cout.flush();
-    }
-*/    
-    //--------------------------------------------------------------
-    // write solution to file
-    // Calculate H mole ratio, lattice constant
-    //--------------------------------------------------------------
-    if((iTimeStep%input.file.output_frequency == 0) || lastStep) {
-      // Calculate H mole ratio, lattice constant
-      err = calculateMacroResults(PdPd, PdPdnum, q_Pd0, x0, PdSubsurf, HSubsurf, xH, xHinterior);
-      // check reaching equilibrium or not
-      if(fabs(xH0-xH)<1.0e-6) lastStep = true; 
-      else xH0 = xH;  
-      // write time history of macroscropic results to file
-      if(!MPI_rank) {
-        result_file << "  " << scientific << t << "  " << scientific << xH << "  " << scientific << xHinterior << " " << scientific << free_entropy << endl;
-        result_file.flush();
-      }
-      // write solution to file
-      output.output_solution(iFrame++, iTimeStep, q_Pd0, q_H0, sigma_Pd0, sigma_H0, x0, gamma, full_H);
-    }
-    MPI_Barrier(comm);
-  }
-  
-  if(!MPI_rank) {
-    cout << "----------------------------" << endl;
-    cout << "--   End of Main Loop     --" << endl;
-    cout << "----------------------------" << endl;
-    cout.flush();
-  }
-
-  //--------------------------------------------------------------
-  // close result file
-  //-------------------------------------------------------------- 
-  result_file.close();
-
-  if(!MPI_rank) {
-    cout << "======================================" << endl;
-    cout << "   NORMAL TERMINATION (t = " << t << ") " << endl;
-    cout << "======================================" << endl;
-  }
-  MPI_Barrier(comm);
-  if(!MPI_rank) cout << "Total Computation Time: " << ((double)(clock()-start_time))/CLOCKS_PER_SEC << " sec." << endl;
-//  MPI_Finalize(); //will be called in the destructor of Tao
+  int mpi_finalized(0);
+  MPI_Finalized(&mpi_finalized);
+  if(!mpi_finalized)
+    MPI_Finalize();
 
   return 0;
 }

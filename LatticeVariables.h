@@ -14,6 +14,8 @@ class LatticeVariables {
 
 public:
 
+  int lattice_id;
+
   Vec3D lmin, lmax; //!< min and max lattice coords
 
   int size; //!< size of all the vectors below
@@ -26,7 +28,7 @@ public:
   std::vector<Vec3D> q0; //!< initial mean position
 //  std::vector<Vec3D> p; //!< mean momentum
   std::vector<double> sigma; //!< atomic frequency
-  std::vector<int> subsurf; //!< 0 ~ not within subsurface; 1 ~ within subsurface
+  std::vector<int> tag; //!< 0 ~ not within subsurface; 1 ~ within subsurface
 
   // Variables defined for each species
   int nSpecies_max; //!< maximum number of species of the materials on this lattice
@@ -35,15 +37,16 @@ public:
   std::vector<std::vector<double> > x; //!< molar fraction
   std::vector<std::vector<double> > gamma; //!< chemical potential
 
-  std::vector<std::vector<double> > xmin; //!< min molar fraction (from input)
-
-
 public:
 
   LatticeVariables();
   ~LatticeVariables();
 
   void Clear();
+
+  void FindBoundingBoxAndSize(); //<! calculates lmin, lmax, size
+
+  int RemoveConflictingSites(std::vector<Vec3D> &q2,  double dmin); //!< remove sites that are within dmin from any points in q2
 
 };
 

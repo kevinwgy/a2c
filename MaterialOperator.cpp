@@ -1,4 +1,6 @@
 #include<MaterialOperator.h>
+#include<Utils.h>
+#include<set>
 
 //------------------------------------------------------------------------
 
@@ -32,7 +34,7 @@ MaterialOperator::Setup(int material_id_, MaterialData &iod_mat, vector<string> 
     species_g2l[gid] = i;
     checker.insert(gid);
   }
-  if(checker.size() != iod_mat_ptr->nSpecies) {
+  if((int)checker.size() != iod_mat_ptr->nSpecies) {
     print_error("*** Error: Detected duplicate species IDs in Material[%d].\n", material_id); 
     exit_mpi();
   }

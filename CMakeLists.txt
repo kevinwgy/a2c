@@ -50,6 +50,7 @@ ADD_CUSTOM_COMMAND(
 # add include and link directories 
 include_directories("${CMAKE_SOURCE_DIR}")
 include_directories(${CMAKE_SOURCE_DIR}/GeoTools)
+include_directories(${CMAKE_SOURCE_DIR}/MathTools)
 include_directories(${CMAKE_SOURCE_DIR}/ComTools)
 link_directories(${CMAKE_SOURCE_DIR}/parser)
 
@@ -71,15 +72,16 @@ Utils.cpp
 MaterialOperator.cpp
 SpaceInitializer.cpp
 SpaceOperator.cpp
-boundaryconditions.cpp
-calculateresults.cpp
-electrondensity.cpp
-integrate.cpp
-minimizer.cpp
-neighbors.cpp
-potential.cpp
-quadrature.cpp
-readresults.cpp
+#boundaryconditions.cpp
+#calculateresults.cpp
+#electrondensity.cpp
+#integrate.cpp
+#minimizer.cpp
+#neighbors.cpp
+#potential.cpp
+#quadrature.cpp
+#readresults.cpp
+MathTools/polynomial_equations.cpp
 GeoTools/BoundingBoxes.cpp
 GeoTools/GeoTools.cpp
 ComTools/CommunicationTools.cpp

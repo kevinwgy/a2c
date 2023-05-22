@@ -32,16 +32,14 @@ class LatticeStructure
   std::vector<Vec3D> site_coords; //!< lattice coords [0, 1) of each site
   std::vector<int>   site_matid; //!< material id of each site
 
-  std::vector<int>   site_dataMap_id; //!< the dataMap index (IoData) of each site
-
   int nSpecies_max; //!< max number of species among the materials on this lattice
 
 public:
   // these vectors are "public"
   std::vector<std::vector<int> > site_species_id; //!< the (global) ID of each species of each site
-  std::vector<std::vector<bool> > site_species_diff; //!< whether each species is diffusive
-  std::vector<std::vector<double> > site_species_x0 //!< initial molar fraction
-  std::vector<std::vector<double> > site_species_xmin //!< min molar fraction
+  std::vector<std::vector<int> > site_species_diff; //!< (0 or 1) whether each species is diffusive
+  std::vector<std::vector<double> > site_species_x0; //!< initial molar fraction
+  std::vector<std::vector<double> > site_species_xmin; //!< min molar fraction
 
 
 public:
@@ -49,8 +47,7 @@ public:
   LatticeStructure();
   ~LatticeStructure();
 
-  void Setup(int lattice_id_, LatticeData &iod_lattice, std::vector<MaterialOperator> &mato,
-             int nSpecies);
+  void Setup(int lattice_id_, LatticeData &iod_lattice, std::vector<MaterialOperator> &mato);
 
   inline int GetLatticeID() {return lattice_id;}
   inline Vec3D GetLatticeOrigin() {return o;}
@@ -60,13 +57,14 @@ public:
   inline double GetLatticeAngle(int p) {assert(p>=0 && p<=2); return alpha_beta_gamma[p];}
   inline double GetUnitCellVolume() {return vol;}
 
+  inline double GetDmin() {return dmin;}
+
   inline int GetNumberOfSites() {return site_coords.size();}
   inline Vec3D GetCoordsOfSite(int p) {assert(p>=0 && p<(int)site_coords.size()); return site_coords[p];}
-  inline Vec3D GetMatIDOfSite(int p) {assert(p>=0 && p<(int)site_matid.size()); return site_matid[p];}
+  inline int GetMatIDOfSite(int p) {assert(p>=0 && p<(int)site_matid.size()); return site_matid[p];}
 
   inline int GetMaxNumberOfSpeciesPerSite() {return nSpecies_max;}
 
-  inline Vec3D GetDataMapIDOfSite(int p) {assert(p>=0 && p<(int)site_matid.size()); return site_dataMap_id[p];}
 
   //! functions that switch from (x,y,z) and (la,lb,lc) coords
   inline Vec3D GetXYZ(double la, double lb, double lc) {return la*abc[0]+lb*abc[1]+lc*abc[2];}
@@ -79,6 +77,6 @@ public:
   Vec3D GetLocalCoordsFromXYZ(Vec3D &xyz, Int3 *ijk = NULL); 
   Vec3D GetLocalCoordsFromLABC(Vec3D &labc, Int3 *ijk = NULL);
 
-}
+};
 
 #endif

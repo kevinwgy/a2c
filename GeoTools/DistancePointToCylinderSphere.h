@@ -76,7 +76,7 @@ public:
       rdir /= r;
 
     //calculate unsigned distance from node to the boundary of the cylinder
-    double dist, rb, rf;
+    double dist, rb(0.0), rf(0.0);
     if(back_cap && x<=-Lhalf) {
       Vec3D vec = *(Vec3D *)Q_ - xb;
       rb = vec.norm();

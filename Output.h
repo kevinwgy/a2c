@@ -1,11 +1,11 @@
 #ifndef _OUTPUT_H_
 #define _OUTPUT_H_
 #include <IoData.h>
-#include <vector>
+#include <LatticeVariables.h>
 #include <Vector3D.h>
+#include <vector>
 #include <string>
 #include <mpi.h>
-class LatticeVariables;
 
 /*******************************************************
  * class Output is responsible for outputing solutions

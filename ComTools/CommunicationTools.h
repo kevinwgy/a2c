@@ -28,7 +28,7 @@ public:
 
   //! This function dynamically allocate and free large chunks of memnory. Should not be called frequently
   template<typename T>
-  static void GatherVectorOfVectors(MPI_Comm& comm, int gatherer, std::vector<std::vector<T> > my_data,
+  static void GatherVectorOfVectors(MPI_Comm& comm, int gatherer, std::vector<std::vector<T> >& my_data,
                                     std::vector<std::vector<T> >* all_data_ptr); 
 
   //! This function dynamically allocate and free large chunks of memnory. Should not be called frequently
