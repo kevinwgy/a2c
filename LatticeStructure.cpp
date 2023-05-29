@@ -73,6 +73,7 @@ LatticeStructure::Setup(int lattice_id_, LatticeData &iod_lattice, vector<Materi
   site_species_diff.resize(nSites);
   site_species_x0.resize(nSites);
   site_species_xmin.resize(nSites);
+  site_species_gamma.resize(nSites);
   
   nSpecies_max = 0;
 
@@ -114,6 +115,7 @@ LatticeStructure::Setup(int lattice_id_, LatticeData &iod_lattice, vector<Materi
     site_species_diff[site_id].resize(nMatSpecs, 0); //by default, not diffuisive
     site_species_x0[site_id].resize(nMatSpecs, mato[matid].GetMinMolarFraction());
     site_species_xmin[site_id].resize(nMatSpecs, mato[matid].GetMinMolarFraction());
+    site_species_gamma[site_id].resize(nMatSpecs, 0.0);
 
     std::set<int> checker1, checker2; //for error detection only
     for(auto&& sp : it->second->speciesMap.dataMap) {

@@ -61,7 +61,7 @@ private:
                              std::map<int,GeoTools::DistanceFromPointToCylinderSphere*> &cylindersphere_cal,
                              std::map<int,GeoTools::DistanceFromPointToSphere*> &sphere_cal,
                              std::map<int,GeoTools::DistanceFromPointToParallelepiped*> &parallelepiped_cal,
-                             std::map<int,GeoTools::DistanceFromPointToSpheroid*> spheroid_cal,
+                             std::map<int,GeoTools::DistanceFromPointToSpheroid*> &spheroid_cal,
                              UserDefinedGeometry *geom_specifier,
                              LatticeVariables &LV);
 
@@ -76,7 +76,7 @@ private:
                                    std::map<int,GeoTools::DistanceFromPointToCylinderSphere*> &cylindersphere_cal,
                                    std::map<int,GeoTools::DistanceFromPointToSphere*> &sphere_cal,
                                    std::map<int,GeoTools::DistanceFromPointToParallelepiped*> &parallelepiped_cal,
-                                   std::map<int,GeoTools::DistanceFromPointToSpheroid*> spheroid_cal);
+                                   std::map<int,GeoTools::DistanceFromPointToSpheroid*> &spheroid_cal);
 };
 
 

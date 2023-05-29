@@ -3,6 +3,7 @@
  **********************************************************************************/
 #include <Output.h>
 #include <SpaceOperator.h>
+#include <cstring>
 #include <Utils.h>
 #include <set>
 using std::vector;
@@ -42,7 +43,7 @@ int main(int argc, char* argv[])
   // Get global species ID & Name
   //--------------------------------------------------------------
   int nSpecies = iod.speciesMap.dataMap.size();
-  vector<string> global_species;
+  vector<string> global_species(nSpecies);
   std::set<int> species_tracker; //for error detection only
   for(auto&& sp : iod.speciesMap.dataMap) {
     int spid = sp.first;
@@ -57,6 +58,7 @@ int main(int argc, char* argv[])
     print_error("*** Error: Detected error in global species indices.\n");
     exit_mpi();
   } 
+
 
   //--------------------------------------------------------------
   // Setup materials
@@ -79,6 +81,7 @@ int main(int argc, char* argv[])
     exit_mpi();
   } 
 
+
   //--------------------------------------------------------------
   // Setup lattice constants
   //--------------------------------------------------------------
@@ -99,6 +102,7 @@ int main(int argc, char* argv[])
     exit_mpi();
   }
 
+
   //--------------------------------------------------------------
   // Setup outputs
   //--------------------------------------------------------------
@@ -113,12 +117,23 @@ int main(int argc, char* argv[])
 
 
 
-
   print("\n");
   print("----------------------------\n");
   print("--       Main Loop        --\n");
   print("----------------------------\n");
-  double t = 0.0;
+  double t = 0.0, dt = 0.0;
+  int time_step = 0;
+
+  output.OutputSolution(t, dt, time_step, LVS, true); //force-write
+
+  // trial run
+  for(int i=1; i<argc; i++)
+    if(!strcmp(argv[i], "-t")) 
+      goto THE_END;
+
+
+
+
 
 
   print("\n");
@@ -128,6 +143,10 @@ int main(int argc, char* argv[])
   print("Total Computation Time: %f sec.\n", ((double)(clock()-start_time))/CLOCKS_PER_SEC);
   print("\n");
 
+
+
+
+THE_END:
 
   int mpi_finalized(0);
   MPI_Finalized(&mpi_finalized);

@@ -14,6 +14,12 @@ Output::Output(MPI_Comm &comm_, IoData& iod_)
 
   last_snapshot_time = -1.0;
 
+  precision = 2;
+  if(iod.output.precision == OutputData::LOW)  
+    precision = 0;
+  else if(iod.output.precision == OutputData::MEDIUM)
+    precision = 1;
+
 
   // store material names
   int nMaterials = iod.materialMap.dataMap.size();
@@ -82,7 +88,6 @@ Output::Output(MPI_Comm &comm_, IoData& iod_)
       print(pvdfile, "</VTKFile>\n");
 
       fclose(pvdfile);
-      delete pvdfile;
     }
   }
 
@@ -104,7 +109,7 @@ Output::OutputSolution(double time, double dt, int time_step, vector<LatticeVari
                    last_snapshot_time, force_write)) {
     if(iod.output.format == OutputData::VTP || iod.output.format == OutputData::VTP_and_XYZ)
       OutputSolutionVTP(time, time_step, LVS);
-    else if(iod.output.format == OutputData::XYZ || iod.output.format == OutputData::VTP_and_XYZ)
+    if(iod.output.format == OutputData::XYZ || iod.output.format == OutputData::VTP_and_XYZ)
       OutputSolutionXYZ(time, time_step, LVS);
 
     iFrame++;
@@ -129,8 +134,6 @@ Output::OutputSolutionOnLatticeVTP(double time, int lattice_id, LatticeVariables
 
   int MPI_rank = 0;
   MPI_Comm_rank(comm, &MPI_rank);
-  if(MPI_rank)
-    return;
 
   // create solution file
   char full_fname[256];
@@ -138,19 +141,19 @@ Output::OutputSolutionOnLatticeVTP(double time, int lattice_id, LatticeVariables
   if(iFrame<10) {
     sprintf(fname, "%s_L%d_000%d.vtp",
             iod.output.solution_filename_base, lattice_id, iFrame);
-    sprintf(full_fname, "%s%s_L%d_000%d.vtr", iod.output.prefix,
+    sprintf(full_fname, "%s%s_L%d_000%d.vtp", iod.output.prefix,
             iod.output.solution_filename_base, lattice_id, iFrame);
   }
   else if(iFrame<100){
     sprintf(fname, "%s_L%d_00%d.vtp",
             iod.output.solution_filename_base, lattice_id, iFrame);
-    sprintf(full_fname, "%s%s_L%d_00%d.vtr", iod.output.prefix,
+    sprintf(full_fname, "%s%s_L%d_00%d.vtp", iod.output.prefix,
             iod.output.solution_filename_base, lattice_id, iFrame);
   }
   else if(iFrame<1000){
     sprintf(fname, "%s_L%d_0%d.vtp",
             iod.output.solution_filename_base, lattice_id, iFrame);
-    sprintf(full_fname, "%s%s_L%d_0%d.vtr", iod.output.prefix,
+    sprintf(full_fname, "%s%s_L%d_0%d.vtp", iod.output.prefix,
             iod.output.solution_filename_base, lattice_id, iFrame);
   }
   else {
@@ -177,8 +180,17 @@ Output::OutputSolutionOnLatticeVTP(double time, int lattice_id, LatticeVariables
   // Write coords ("q")
   print(vtpfile, "      <Points>\n");
   print(vtpfile, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\"ascii\">\n");
-  for(auto&& q : LV.q)
-    print(vtpfile, "          %16.10e  %16.10e  %16.10e\n", q[0], q[1], q[2]);
+  if(precision==2) {
+    for(auto&& q : LV.q)
+      print(vtpfile, "          %16.10e %16.10e %16.10e\n", q[0], q[1], q[2]);
+  } else if(precision==1) {
+    for(auto&& q : LV.q)
+      print(vtpfile, "          %10.6e %10.6e %10.6e\n", q[0], q[1], q[2]);
+  } else if(precision==0) {
+    for(auto&& q : LV.q)
+      print(vtpfile, "          %7.4e %7.4e %7.4e\n", q[0], q[1], q[2]);
+  }
+
   print(vtpfile, "        </DataArray>\n");
   print(vtpfile, "      </Points>\n");
   
@@ -190,6 +202,7 @@ Output::OutputSolutionOnLatticeVTP(double time, int lattice_id, LatticeVariables
   assert(LV.siteid.size() == LV.q.size());
   for(auto&& sid : LV.siteid)
     print(vtpfile, "%d ", sid);
+  print(vtpfile, "\n");
   print(vtpfile, "        </DataArray>\n");
 
   // Write material id
@@ -198,6 +211,7 @@ Output::OutputSolutionOnLatticeVTP(double time, int lattice_id, LatticeVariables
   assert(LV.matid.size() == LV.q.size());
   for(auto&& id : LV.matid)
     print(vtpfile, "%d ", id);
+  print(vtpfile, "\n");
   print(vtpfile, "        </DataArray>\n");
 
   // Write tag 
@@ -206,14 +220,24 @@ Output::OutputSolutionOnLatticeVTP(double time, int lattice_id, LatticeVariables
   assert(LV.tag.size() == LV.q.size());
   for(auto&& id : LV.tag)
     print(vtpfile, "%d ", id);
+  print(vtpfile, "\n");
   print(vtpfile, "        </DataArray>\n");
 
   // Write atomic frequency (sigma)
   print(vtpfile, "        <DataArray type=\"Float32\" NumberOfComponents=\"1\" Name=\"AtomicFrequency\" format=\"ascii\">\n");
   print(vtpfile, "          ");
   assert(LV.sigma.size() == LV.q.size());
-  for(auto&& sig : LV.sigma)
-    print(vtpfile, "%e ", sig);
+  if(precision==2) {
+    for(auto&& sig : LV.sigma)
+      print(vtpfile, "%16.10e ", sig);
+  } else if(precision==1) {
+    for(auto&& sig : LV.sigma)
+      print(vtpfile, "%10.6e ", sig);
+  } else if(precision==0) {
+    for(auto&& sig : LV.sigma)
+      print(vtpfile, "%7.4e ", sig);
+  }
+  print(vtpfile, "\n");
   print(vtpfile, "        </DataArray>\n");
 
   
@@ -227,11 +251,20 @@ Output::OutputSolutionOnLatticeVTP(double time, int lattice_id, LatticeVariables
   assert(LV.x.size() == LV.q.size());
   for(auto&& x : LV.x) {
     int i=0; 
-    while(i<(int)x.size()) 
-      print(vtpfile, "%e ", x[i++]);
+    if(precision==2) {
+      while(i<(int)x.size()) 
+        print(vtpfile, "%16.10e ", x[i++]);
+    } else if(precision==1) {
+      while(i<(int)x.size()) 
+        print(vtpfile, "%10.6e ", x[i++]);
+    } else if(precision==0) {
+      while(i<(int)x.size()) 
+        print(vtpfile, "%7.4e ", x[i++]);
+    }
     while(i++<ns)
       print(vtpfile, "0 ");
   } 
+  print(vtpfile, "\n");
   print(vtpfile, "        </DataArray>\n");
 
   // Write chemical potential 
@@ -241,11 +274,20 @@ Output::OutputSolutionOnLatticeVTP(double time, int lattice_id, LatticeVariables
   assert(LV.gamma.size() == LV.q.size());
   for(auto&& gam : LV.gamma) {
     int i=0; 
-    while(i<(int)gam.size()) 
-      print(vtpfile, "%e ", gam[i++]);
+    if(precision==2) {
+      while(i<(int)gam.size()) 
+        print(vtpfile, "%16.10e ", gam[i++]);
+    } else if(precision==1) {
+      while(i<(int)gam.size()) 
+        print(vtpfile, "%10.6e ", gam[i++]);
+    } else if(precision==0) {
+      while(i<(int)gam.size()) 
+        print(vtpfile, "%7.4e ", gam[i++]);
+    }
     while(i++<ns)
       print(vtpfile, "0 ");
   } 
+  print(vtpfile, "\n");
   print(vtpfile, "        </DataArray>\n");
 
   print(vtpfile, "      </PointData>\n");
@@ -253,7 +295,6 @@ Output::OutputSolutionOnLatticeVTP(double time, int lattice_id, LatticeVariables
   print(vtpfile, "  </PolyData>\n");
   print(vtpfile, "</VTKFile>\n");
   fclose(vtpfile);
-  delete vtpfile;
   
 
   // Add a line to the pvd file to record the new solutio snapshot
@@ -269,9 +310,8 @@ Output::OutputSolutionOnLatticeVTP(double time, int lattice_id, LatticeVariables
   print(pvdfile, "  </Collection>\n");
   print(pvdfile, "</VTKFile>\n");
   fclose(pvdfile);
-  delete pvdfile;
 
-  print("- Wrote solution on Lattice[%d] at %e to %s.\n", lattice_id, time, fname);
+  print("- Wrote solution on Lattice[%d] at time %e to %s.\n", lattice_id, time, full_fname);
 
 }
 
@@ -291,8 +331,6 @@ Output::OutputSolutionOnLatticeXYZ(double time, int lattice_id, LatticeVariables
 {
   int MPI_rank = 0;
   MPI_Comm_rank(comm, &MPI_rank);
-  if(MPI_rank)
-    return;
 
   // sanity checks
   auto np = LV.q.size();
@@ -352,32 +390,103 @@ Output::OutputSolutionOnLatticeXYZ(double time, int lattice_id, LatticeVariables
 
 
   //Write results
-  for(int i=0; i<(int)np; i++) {
-    print(xyzfile, "%16s  ", material_name[LV.matid[i]].c_str());
-    print(xyzfile, "%16.10e  %16.10e  %16.10e  ", LV.q[i][0], LV.q[i][1], LV.q[i][2]);
-    print(xyzfile, "%16.10e  %16.10e  %16.10e  ", 
-          LV.q[i][0]-LV.q0[i][0], LV.q[i][1]-LV.q0[i][1], LV.q[i][2]-LV.q0[i][2]);
-    print(xyzfile, "%4d  %16.10e  %4d  ", LV.siteid[i], LV.sigma[i], LV.tag[i]);
+  if(precision==2) {
+    for(int i=0; i<(int)np; i++) {
+      print(xyzfile, "%16s  ", material_name[LV.matid[i]].c_str());
+      print(xyzfile, "%16.10e  %16.10e  %16.10e  ", LV.q[i][0], LV.q[i][1], LV.q[i][2]);
+      print(xyzfile, "%16.10e  %16.10e  %16.10e  ", 
+            LV.q[i][0]-LV.q0[i][0], LV.q[i][1]-LV.q0[i][1], LV.q[i][2]-LV.q0[i][2]);
+      print(xyzfile, "%4d  %16.10e  %4d  ", LV.siteid[i], LV.sigma[i], LV.tag[i]);
 
-    int s = 0; 
-    while(s<(int)LV.x.size()) 
-      print(xyzfile, "%16.10e  ", LV.x[s++]);
-    while(s++<ns)
-      print(xyzfile, "%16.10e  ", 0.0);
+      int s = 0; 
+      while(s<(int)LV.x[i].size()) {
+        print(xyzfile, "%16.10e  ", LV.x[i][s]);
+        s++;
+      }
+      while(s<ns) {
+        print(xyzfile, "%16.10e  ", 0.0);
+        s++;
+      }
 
-    s = 0;
-    while(s<(int)LV.gamma.size()) 
-      print(xyzfile, "%16.10e  ", LV.gamma[s++]);
-    while(s++<ns)
-      print(xyzfile, "%16.10e  ", 0.0);
+      s = 0;
+      while(s<(int)LV.gamma[i].size()) {
+        print(xyzfile, "%16.10e  ", LV.gamma[i][s]);
+        s++;
+      }
+      while(s<ns) {
+        print(xyzfile, "%16.10e  ", 0.0);
+        s++;
+      }
 
-    print(xyzfile,"\n");
+      print(xyzfile,"\n");
+    }
+  }
+  else if(precision==1) {
+    for(int i=0; i<(int)np; i++) {
+      print(xyzfile, "%16s ", material_name[LV.matid[i]].c_str());
+      print(xyzfile, "%10.6e %10.6e %10.6e ", LV.q[i][0], LV.q[i][1], LV.q[i][2]);
+      print(xyzfile, "%10.6e %10.6e %10.6e ", 
+            LV.q[i][0]-LV.q0[i][0], LV.q[i][1]-LV.q0[i][1], LV.q[i][2]-LV.q0[i][2]);
+      print(xyzfile, "%4d %10.6e %4d ", LV.siteid[i], LV.sigma[i], LV.tag[i]);
+
+      int s = 0; 
+      while(s<(int)LV.x[i].size()) {
+        print(xyzfile, "%10.6e ", LV.x[i][s]);
+        s++;
+      }
+      while(s<ns) {
+        print(xyzfile, "%10.6e ", 0.0);
+        s++;
+      }
+
+      s = 0;
+      while(s<(int)LV.gamma[i].size()) {
+        print(xyzfile, "%10.6e ", LV.gamma[i][s]);
+        s++;
+      }
+      while(s<ns) {
+        print(xyzfile, "%10.6e ", 0.0);
+        s++;
+      }
+
+      print(xyzfile,"\n");
+    }
+  }
+  else if(precision==0) {
+    for(int i=0; i<(int)np; i++) {
+      print(xyzfile, "%16s ", material_name[LV.matid[i]].c_str());
+      print(xyzfile, "%7.4e %7.4e %7.4e ", LV.q[i][0], LV.q[i][1], LV.q[i][2]);
+      print(xyzfile, "%7.4e %7.4e %7.4e ", 
+      LV.q[i][0]-LV.q0[i][0], LV.q[i][1]-LV.q0[i][1], LV.q[i][2]-LV.q0[i][2]);
+      print(xyzfile, "%4d %7.4e %4d ", LV.siteid[i], LV.sigma[i], LV.tag[i]);
+
+      int s = 0; 
+      while(s<(int)LV.x[i].size()) {
+        print(xyzfile, "%7.4e ", LV.x[i][s]);
+        s++;
+      }
+      while(s<ns) {
+        print(xyzfile, "%7.4e ", 0.0);
+        s++;
+      }
+
+      s = 0;
+      while(s<(int)LV.gamma[i].size()) {
+        print(xyzfile, "%7.4e ", LV.gamma[i][s]);
+       s++;
+      }
+      while(s<ns) {
+        print(xyzfile, "%7.4e ", 0.0);
+        s++;
+      }
+
+      print(xyzfile,"\n");
+    }
   }
 
   fclose(xyzfile);
-  delete xyzfile;
 
-  print("- Wrote solution on Lattice[%d] at %e to %s.\n", lattice_id, time, full_fname);
+  print("- Wrote solution on Lattice[%d] at time %e to %s.\n", lattice_id, time, full_fname);
 }
 
 //--------------------------------------------------------------------------------

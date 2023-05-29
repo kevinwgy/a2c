@@ -179,7 +179,7 @@ struct CustomGeometryData {
   CustomGeometryData();
   ~CustomGeometryData() {}
 
-  void setup(const char *, ClassAssigner *);
+  void setup(const char *, ClassAssigner * = 0);
 
 };
 
@@ -193,6 +193,18 @@ struct GlobalSpeciesData
   ~GlobalSpeciesData() {}
 
   Assigner *getAssigner();
+};
+
+//------------------------------------------------------------------------------
+//! Glocal species ID & name
+struct GlobalSpeciesSetData
+{
+  ObjectMap<GlobalSpeciesData> speciesMap; //!< global names & ids of species
+  
+  GlobalSpeciesSetData();
+  ~GlobalSpeciesSetData() {}
+
+  void setup(const char *, ClassAssigner * = 0);
 };
 
 //------------------------------------------------------------------------------
@@ -415,10 +427,14 @@ struct OutputData
   const char* prefix;
   const char* solution_filename_base;
 
-  enum VerbosityLevel {LOW = 0, MEDIUM = 1, HIGH = 2} verbose;
+  enum LowMediumHigh {LOW = 0, MEDIUM = 1, HIGH = 2};
+
+  LowMediumHigh verbose;
 
   int frequency;
   double frequency_dt;
+
+  LowMediumHigh precision;
 
   OutputData();
   ~OutputData() {}

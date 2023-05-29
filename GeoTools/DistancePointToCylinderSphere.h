@@ -43,7 +43,7 @@ public:
     assert(norm!=0.0);
     dir /= norm;
 
-    double Lhalf = L/2.0;
+    Lhalf = L/2.0;
 
     xcen += Lhalf*dir; //xcen is the center of the cylinder
 

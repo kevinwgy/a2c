@@ -40,6 +40,7 @@ public:
   std::vector<std::vector<int> > site_species_diff; //!< (0 or 1) whether each species is diffusive
   std::vector<std::vector<double> > site_species_x0; //!< initial molar fraction
   std::vector<std::vector<double> > site_species_xmin; //!< min molar fraction
+  std::vector<std::vector<double> > site_species_gamma; //!< chemical potential (default is 0)
 
 
 public:
@@ -67,10 +68,10 @@ public:
 
 
   //! functions that switch from (x,y,z) and (la,lb,lc) coords
-  inline Vec3D GetXYZ(double la, double lb, double lc) {return la*abc[0]+lb*abc[1]+lc*abc[2];}
+  inline Vec3D GetXYZ(double la, double lb, double lc) {return o+la*abc[0]+lb*abc[1]+lc*abc[2];}
   inline Vec3D GetXYZ(Vec3D& labc) {return GetXYZ(labc[0], labc[1], labc[2]);}
   inline Vec3D GetLABC(Vec3D& xyz) {
-    Vec3D labc; for(int p=0; p<3; p++) labc[p] = xyz*dirabc[p]/abc0[p]; return labc;}
+    Vec3D labc; for(int p=0; p<3; p++) labc[p] = (xyz-o)*dirabc[p]/abc0[p]; return labc;}
   inline Vec3D GetLABC(double x, double y, double z) {Vec3D xyz(x,y,z); return GetLABC(xyz);}
 
   //! Get cell id & local lattice coords

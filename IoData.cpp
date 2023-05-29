@@ -2,6 +2,7 @@
 #include <Utils.h>
 #include <cassert>
 #include <climits>
+#include <cstring>
 
 RootClassAssigner *nullAssigner = new RootClassAssigner;
 
@@ -113,9 +114,9 @@ Assigner *ParallelepipedData::getAssigner()
 
   ClassAssigner *ca = new ClassAssigner("normal", 16, nullAssigner);
 
-  new ClassDouble<ParallelepipedData> (ca, "X0", this, &ParallelepipedData::x0);
-  new ClassDouble<ParallelepipedData> (ca, "Y0", this, &ParallelepipedData::y0);
-  new ClassDouble<ParallelepipedData> (ca, "Z0", this, &ParallelepipedData::z0);
+  new ClassDouble<ParallelepipedData> (ca, "Px", this, &ParallelepipedData::x0);
+  new ClassDouble<ParallelepipedData> (ca, "Py", this, &ParallelepipedData::y0);
+  new ClassDouble<ParallelepipedData> (ca, "Pz", this, &ParallelepipedData::z0);
 
   new ClassDouble<ParallelepipedData> (ca, "Ax", this, &ParallelepipedData::ax);
   new ClassDouble<ParallelepipedData> (ca, "Ay", this, &ParallelepipedData::ay);
@@ -338,6 +339,20 @@ void CustomGeometryData::setup(const char *name, ClassAssigner *father)
   new ClassInt<CustomGeometryData>(ca, "OperationOrder", this, &CustomGeometryData::order);
 
   initialConditions.setup("InitialState", ca);
+}
+
+//---------------------------------------------------------
+
+GlobalSpeciesSetData::GlobalSpeciesSetData()
+{ }
+
+//---------------------------------------------------------
+
+void
+GlobalSpeciesSetData::setup(const char *name, ClassAssigner *father)
+{
+  ClassAssigner *ca = new ClassAssigner(name, 1, father);
+  speciesMap.setup("Species", ca);
 }
 
 //---------------------------------------------------------
@@ -696,6 +711,7 @@ OutputData::OutputData()
   frequency = 0;
   frequency_dt = -1.0;
   verbose = LOW;
+  precision = MEDIUM;
 }
 
 //---------------------------------------------------------
@@ -703,7 +719,7 @@ OutputData::OutputData()
 void OutputData::setup(const char *name, ClassAssigner *father)
 {
 
-  ClassAssigner *ca = new ClassAssigner(name, 6, father);
+  ClassAssigner *ca = new ClassAssigner(name, 7, father);
 
   new ClassToken<OutputData>(ca, "Format", this,
                                reinterpret_cast<int OutputData::*>(&OutputData::format), 4,
@@ -719,6 +735,10 @@ void OutputData::setup(const char *name, ClassAssigner *father)
 
   new ClassToken<OutputData>(ca, "VerboseScreenOutput", this,
                                reinterpret_cast<int OutputData::*>(&OutputData::verbose), 3,
+                               "Low", 0, "Medium", 1, "High", 2);
+
+  new ClassToken<OutputData>(ca, "Precision", this,
+                               reinterpret_cast<int OutputData::*>(&OutputData::precision), 3,
                                "Low", 0, "Medium", 1, "High", 2);
 }
 
@@ -762,7 +782,14 @@ void IoData::readCmdLine(int argc, char** argv)
     fprintf(stderr,"ERROR: Input file not provided!\n");
     exit(-1);
   }
-  cmdFileName = argv[1];
+ 
+  // read the first input argument that is not a "flag"
+  for(int i=1; i<argc; i++) {
+    if(!strcmp(argv[i], "-t"))
+      continue;
+    cmdFileName = argv[i];
+    break;
+  }
 }
 
 //-----------------------------------------------------
@@ -795,11 +822,11 @@ void IoData::setupCmdFileVariables()
 {
   ClassAssigner *ca = new ClassAssigner("normal", 8, 0);
 
-  latticeMap.setup("Lattice", ca);
+  latticeMap.setup("Lattice", 0);
 
-  materialMap.setup("Material", ca);
+  materialMap.setup("Material", 0);
 
-  speciesMap.setup("Species", ca);
+  speciesMap.setup("Species", 0);
 
   icMap.setup("RegionalInitialCondition", ca);
 

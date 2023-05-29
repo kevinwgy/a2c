@@ -326,7 +326,7 @@ SpaceInitializer::SortUserSpecifiedGeometries(IoDataGeo &iod_geo,
                                               map<int, DistanceFromPointToCylinderSphere*> &cylindersphere_cal,
                                               map<int, DistanceFromPointToSphere*> &sphere_cal,
                                               map<int, DistanceFromPointToParallelepiped*> &parallelepiped_cal,
-                                              map<int, DistanceFromPointToSpheroid*> spheroid_cal)
+                                              map<int, DistanceFromPointToSpheroid*> &spheroid_cal)
 {
   //NOTE: "order" records the index of the geometry in the "dataMap", not the ID of the geometry
   //      specified by the user in the input file.
@@ -340,7 +340,7 @@ SpaceInitializer::SortUserSpecifiedGeometries(IoDataGeo &iod_geo,
             + iod_geo.sphereMap.dataMap.size() //3
             + iod_geo.parallelepipedMap.dataMap.size() //4
             + iod_geo.spheroidMap.dataMap.size(); //5
-  if(!strcmp(iod_geo.custom_geometry.specifier, "")) //6 (user has specified a custom geometry)
+  if(strcmp(iod_geo.custom_geometry.specifier, "")) //6 (user has specified a custom geometry)
     nGeom++;
 
   order.assign(nGeom, std::make_pair(-1,-1));
@@ -570,7 +570,7 @@ SpaceInitializer::SortUserSpecifiedGeometries(IoDataGeo &iod_geo,
   geom_tracker.clear();
 
 
-  if(!strcmp(iod_geo.custom_geometry.specifier, "")) {
+  if(strcmp(iod_geo.custom_geometry.specifier, "")) {
     if(iod_geo.custom_geometry.order<0 || iod_geo.custom_geometry.order>=nGeom ||
        order[iod_geo.custom_geometry.order].first!=-1) {
       print_error("*** Error: CustomGeometry has invalid or "
@@ -595,31 +595,6 @@ SpaceInitializer::SortUserSpecifiedGeometries(IoDataGeo &iod_geo,
 }
 
 //---------------------------------------------------------------------
-// instantiation of the above templated function
-/*
-template void 
-SpaceInitializer::SortUserSpecifiedGeometries<LatticeData>(LatticeData &iod_geo,
-                                              vector<std::pair<int,int> > &order,
-                                              vector<DistanceFromPointToPlane*> &plane_cal,
-                                              vector<DistanceFromPointToCylinderCone*> &cylindercone_cal,
-                                              vector<DistanceFromPointToCylinderSphere*> &cylindersphere_cal,
-                                              vector<DistanceFromPointToSphere*> &sphere_cal,
-                                              vector<DistanceFromPointToParallelepiped*> &parallelepiped_cal,
-                                              vector<DistanceFromPointToSpheroid*> spheroid_cal);
-
-//---------------------------------------------------------------------
-// instantiation of the above templated function
-template void 
-SpaceInitializer::SortUserSpecifiedGeometries<RegionalIcData>(RegionalIdData &iod_geo,
-                                              vector<std::pair<int,int> > &order,
-                                              vector<DistanceFromPointToPlane*> &plane_cal,
-                                              vector<DistanceFromPointToCylinderCone*> &cylindercone_cal,
-                                              vector<DistanceFromPointToCylinderSphere*> &cylindersphere_cal,
-                                              vector<DistanceFromPointToSphere*> &sphere_cal,
-                                              vector<DistanceFromPointToParallelepiped*> &parallelepiped_cal,
-                                              vector<DistanceFromPointToSpheroid*> spheroid_cal);
-*/
-//---------------------------------------------------------------------
 
 int
 SpaceInitializer::CheckAndAddSitesInCell(int li, int lj, int lk, LatticeStructure &lat,
@@ -629,7 +604,7 @@ SpaceInitializer::CheckAndAddSitesInCell(int li, int lj, int lk, LatticeStructur
                                          map<int,DistanceFromPointToCylinderSphere*> &cylindersphere_cal,
                                          map<int,DistanceFromPointToSphere*> &sphere_cal,
                                          map<int,DistanceFromPointToParallelepiped*> &parallelepiped_cal,
-                                         map<int,DistanceFromPointToSpheroid*> spheroid_cal,
+                                         map<int,DistanceFromPointToSpheroid*> &spheroid_cal,
                                          UserDefinedGeometry *geom_specifier,
                                          LatticeVariables &LV)
 {
@@ -658,7 +633,7 @@ SpaceInitializer::CheckAndAddSitesInCell(int li, int lj, int lk, LatticeStructur
         auto it = iod_lat.cylinderconeMap.dataMap[oo.second];
         intersect = it->inclusion == CylinderConeData::INTERSECTION;
         if((in && intersect) || (!in && !intersect)) {
-          bool outside = cylindercone_cal[oo.second]->Calculate(q)>0.0;
+          bool outside = cylindercone_cal[oo.second]->Calculate(q)>=0.0;
           in = (outside  && it->side==CylinderConeData::EXTERIOR) ||
                (!outside && it->side==CylinderConeData::INTERIOR);
         }
@@ -667,7 +642,7 @@ SpaceInitializer::CheckAndAddSitesInCell(int li, int lj, int lk, LatticeStructur
         auto it = iod_lat.cylindersphereMap.dataMap[oo.second];
         intersect = it->inclusion == CylinderSphereData::INTERSECTION;
         if((in && intersect) || (!in && !intersect)) {
-          bool outside = cylindersphere_cal[oo.second]->Calculate(q)>0.0;
+          bool outside = cylindersphere_cal[oo.second]->Calculate(q)>=0.0;
           in = (outside  && it->side==CylinderSphereData::EXTERIOR) ||
                (!outside && it->side==CylinderSphereData::INTERIOR);
         }
@@ -676,7 +651,7 @@ SpaceInitializer::CheckAndAddSitesInCell(int li, int lj, int lk, LatticeStructur
         auto it = iod_lat.sphereMap.dataMap[oo.second];
         intersect = it->inclusion == SphereData::INTERSECTION;
         if((in && intersect) || (!in && !intersect)) {
-          bool outside = sphere_cal[oo.second]->Calculate(q)>0.0;
+          bool outside = sphere_cal[oo.second]->Calculate(q)>=0.0;
           in = (outside  && it->side==SphereData::EXTERIOR) ||
                (!outside && it->side==SphereData::INTERIOR);
         }
@@ -685,7 +660,7 @@ SpaceInitializer::CheckAndAddSitesInCell(int li, int lj, int lk, LatticeStructur
         auto it = iod_lat.parallelepipedMap.dataMap[oo.second];
         intersect = it->inclusion == ParallelepipedData::INTERSECTION;
         if((in && intersect) || (!in && !intersect)) {
-          bool outside = parallelepiped_cal[oo.second]->Calculate(q)>0.0;
+          bool outside = parallelepiped_cal[oo.second]->Calculate(q)>=0.0;
           in = (outside  && it->side==ParallelepipedData::EXTERIOR) ||
                (!outside && it->side==ParallelepipedData::INTERIOR);
         }
@@ -694,7 +669,7 @@ SpaceInitializer::CheckAndAddSitesInCell(int li, int lj, int lk, LatticeStructur
         auto it = iod_lat.spheroidMap.dataMap[oo.second];
         intersect = it->inclusion == SpheroidData::INTERSECTION;
         if((in && intersect) || (!in && !intersect)) {
-          bool outside = spheroid_cal[oo.second]->Calculate(q)>0.0;
+          bool outside = spheroid_cal[oo.second]->Calculate(q)>=0.0;
           in = (outside  && it->side==SpheroidData::EXTERIOR) ||
                (!outside && it->side==SpheroidData::INTERIOR);
         }
@@ -730,6 +705,8 @@ SpaceInitializer::CheckAndAddSitesInCell(int li, int lj, int lk, LatticeStructur
       LV.diffusive.push_back(lat.site_species_diff[sid]);
       LV.x.push_back(lat.site_species_x0[sid]);
 
+      LV.gamma.push_back(lat.site_species_gamma[sid]);
+      
       LV.size++;
       counter++;
 
@@ -988,7 +965,7 @@ SpaceInitializer::ApplyRegionalICOnOneLattice(RegionalIcData& ic, LatticeVariabl
         auto it = ic.cylinderconeMap.dataMap[oo.second];
         intersect = it->inclusion == CylinderConeData::INTERSECTION;
         if((in && intersect) || (!in && !intersect)) {
-          bool outside = cylindercone_cal[oo.second]->Calculate(q)>0.0;
+          bool outside = cylindercone_cal[oo.second]->Calculate(q)>=0.0;
           in = (outside  && it->side==CylinderConeData::EXTERIOR) ||
                (!outside && it->side==CylinderConeData::INTERIOR);
         }
@@ -997,7 +974,7 @@ SpaceInitializer::ApplyRegionalICOnOneLattice(RegionalIcData& ic, LatticeVariabl
         auto it = ic.cylindersphereMap.dataMap[oo.second];
         intersect = it->inclusion == CylinderSphereData::INTERSECTION;
         if((in && intersect) || (!in && !intersect)) {
-          bool outside = cylindersphere_cal[oo.second]->Calculate(q)>0.0;
+          bool outside = cylindersphere_cal[oo.second]->Calculate(q)>=0.0;
           in = (outside  && it->side==CylinderSphereData::EXTERIOR) ||
                (!outside && it->side==CylinderSphereData::INTERIOR);
         }
@@ -1006,7 +983,7 @@ SpaceInitializer::ApplyRegionalICOnOneLattice(RegionalIcData& ic, LatticeVariabl
         auto it = ic.sphereMap.dataMap[oo.second];
         intersect = it->inclusion == SphereData::INTERSECTION;
         if((in && intersect) || (!in && !intersect)) {
-          bool outside = sphere_cal[oo.second]->Calculate(q)>0.0;
+          bool outside = sphere_cal[oo.second]->Calculate(q)>=0.0;
           in = (outside  && it->side==SphereData::EXTERIOR) ||
                (!outside && it->side==SphereData::INTERIOR);
         }
@@ -1015,7 +992,7 @@ SpaceInitializer::ApplyRegionalICOnOneLattice(RegionalIcData& ic, LatticeVariabl
         auto it = ic.parallelepipedMap.dataMap[oo.second];
         intersect = it->inclusion == ParallelepipedData::INTERSECTION;
         if((in && intersect) || (!in && !intersect)) {
-          bool outside = parallelepiped_cal[oo.second]->Calculate(q)>0.0;
+          bool outside = parallelepiped_cal[oo.second]->Calculate(q)>=0.0;
           in = (outside  && it->side==ParallelepipedData::EXTERIOR) ||
                (!outside && it->side==ParallelepipedData::INTERIOR);
         }
@@ -1024,7 +1001,7 @@ SpaceInitializer::ApplyRegionalICOnOneLattice(RegionalIcData& ic, LatticeVariabl
         auto it = ic.spheroidMap.dataMap[oo.second];
         intersect = it->inclusion == SpheroidData::INTERSECTION;
         if((in && intersect) || (!in && !intersect)) {
-          bool outside = spheroid_cal[oo.second]->Calculate(q)>0.0;
+          bool outside = spheroid_cal[oo.second]->Calculate(q)>=0.0;
           in = (outside  && it->side==SpheroidData::EXTERIOR) ||
                (!outside && it->side==SpheroidData::INTERIOR);
         }

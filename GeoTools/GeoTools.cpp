@@ -36,7 +36,7 @@ double ProjectPointToPlane(Vec3D& x0, Vec3D& xA, Vec3D& xB, Vec3D& xC, double xi
 
 /*
   fprintf(stdout,"x0 = %e %e %e : xA = %e %e %e, xB = %e %e %e, xC = %e %e %e. area = %e, dir = %e %e %e.\n",
-                  x0[0], x0[1], x0[2], xA[0], xA[1], xA[2], xB[0], xB[1], xB[2], xC[0], xC[1], xC[2], 
+                  x0[0], x0[1], x0[2], xA[0], xA[1], xA[2], xB[0], xB[1], xB[2], xC[0], xC[1], xC[2],
                   *area, (*dir)[0], (*dir)[1], (*dir)[2]);
 */
   if(area && dir) {
