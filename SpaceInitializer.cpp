@@ -108,6 +108,10 @@ SpaceInitializer::SetupLatticeVariables(vector<LatticeVariables> &LVS)
   }
 
 
+  print("\n");
+  for(int iLat=0; iLat<(int)LVS.size(); iLat++) {
+    print("- Created Lattice[%d]: %d sites.\n", iLat, LVS[iLat].size);
+  }
 }
 
 //---------------------------------------------------------------------

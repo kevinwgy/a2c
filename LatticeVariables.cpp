@@ -1,4 +1,5 @@
 #include<LatticeVariables.h>
+#include<Utils.h>
 #include<KDTree.h>
 #include<cmath> //isfinite
 #include<cfloat>
@@ -95,50 +96,70 @@ LatticeVariables::RemoveConflictingSites(std::vector<Vec3D> &q2, double dmin)
   //------------------------------------
   PointIn3D candidate;
   int found;
-
-  auto it_siteid = siteid.begin();
-  auto it_matid  = matid.begin();
-  auto it_l      = l.begin();
-  auto it_q      = q.begin();
-  auto it_q0     = q0.begin();
-  auto it_sigma  = sigma.begin();
-  auto it_tag    = tag.begin();
-  auto it_diff   = diffusive.begin();
-  auto it_spid   = species_id.begin();
-  auto it_x      = x.begin();
-  auto it_gamma  = gamma.begin();
-
-  while(it_q != q.end()) {
-    found = tree.findCandidatesWithin(*it_q, &candidate, 1, dmin);
-    if(found) { //erase it
-      it_siteid = siteid.erase(it_siteid); //iterator moves to the next element
-      it_matid  = matid.erase(it_matid);
-      it_l      = l.erase(it_l);
-      it_q      = q.erase(it_q);
-      it_q0     = q0.erase(it_q0);
-      it_sigma  = sigma.erase(it_sigma);
-      it_tag    = tag.erase(it_tag);
-      it_diff   = diffusive.erase(it_diff);
-      it_spid   = species_id.erase(it_spid);
-      it_x      = x.erase(it_x);
-      it_gamma  = gamma.erase(it_gamma);
-
+  std::vector<bool> stay(size, true);
+  assert(size==(int)q.size());
+  for(int i=0; i<size; i++) {
+    if(tree.findCandidatesWithin(q[i], &candidate, 1, dmin)>0) {
+      stay[i] = false;
       nErased++;
-
-    } else {
-      it_siteid ++;
-      it_matid  ++;
-      it_l      ++;
-      it_q      ++;
-      it_q0     ++;
-      it_sigma  ++;
-      it_tag    ++;
-      it_diff   ++;
-      it_spid   ++;
-      it_x      ++;
-      it_gamma  ++; 
     }
   }
+ 
+  if(nErased==0) //nothing to erase
+    return nErased;
+
+  size = size - nErased;
+
+  // reset the vectors
+  std::vector<int>                  siteid_2     = siteid;      siteid.resize(size);
+  std::vector<int>                  matid_2      = matid;       matid.resize(size);
+  std::vector<Vec3D>                l_2          = l;           l.resize(size);
+  std::vector<Vec3D>                q_2          = q;           q.resize(size);
+  std::vector<Vec3D>                q0_2         = q0;          q0.resize(size);
+  //std::vector<Vec3D>                p_2          = p;           p.resize(size);
+  std::vector<double>               sigma_2      = sigma;       sigma.resize(size);
+  std::vector<int>                  tag_2        = tag;         tag.resize(size);
+  std::vector<std::vector<int> >    diffusive_2  = diffusive;   diffusive.resize(size);
+  std::vector<std::vector<int> >    species_id_2 = species_id;  species_id.resize(size);
+  std::vector<std::vector<double> > x_2          = x;           x.resize(size);
+  std::vector<std::vector<double> > gamma_2      = gamma;       gamma.resize(size);
+  
+  int counter = 0;
+  for(int i=0; i<(int)stay.size(); i++) {
+    if(stay[i]) {
+      siteid[counter]     = siteid_2[i];
+      matid[counter]      = matid_2[i];
+      l[counter]          = l_2[i];
+      q[counter]          = q_2[i];
+      q0[counter]         = q0_2[i];
+//      p[counter]          = p_2[i];
+      sigma[counter]      = sigma_2[i];
+      tag[counter]        = tag_2[i];
+      diffusive[counter]  = diffusive_2[i];
+      species_id[counter] = species_id_2[i];
+      x[counter]          = x_2[i];
+      gamma[counter]      = gamma_2[i];
+
+      counter++;
+    }
+  }
+
+  // sanity checks
+  assert(counter==size);
+  found = false;
+  for(auto&& xi : x) {
+    if((int)xi.size() == nSpecies_max) {
+      found = true;
+      break;
+    } 
+  }
+  if(!found) {
+    print_error("*** Error: After removing overlapping sites on Lattice[%d], nSpecies_max has reduced.\n",
+                lattice_id);
+    exit_mpi();
+  } 
+
+  FindBoundingBoxAndSize(); //update lmin, lmax
 
   return nErased;
 
