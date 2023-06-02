@@ -91,6 +91,7 @@ Output::Output(MPI_Comm &comm_, IoData& iod_)
     }
   }
 
+  MPI_Barrier(comm);
 }
 
 //--------------------------------------------------------------------------------
@@ -313,6 +314,7 @@ Output::OutputSolutionOnLatticeVTP(double time, int lattice_id, LatticeVariables
 
   print("- Wrote solution on Lattice[%d] at time %e to %s.\n", lattice_id, time, full_fname);
 
+  MPI_Barrier(comm);
 }
 
 //--------------------------------------------------------------------------------
@@ -487,6 +489,8 @@ Output::OutputSolutionOnLatticeXYZ(double time, int lattice_id, LatticeVariables
   fclose(xyzfile);
 
   print("- Wrote solution on Lattice[%d] at time %e to %s.\n", lattice_id, time, full_fname);
+
+  MPI_Barrier(comm);
 }
 
 //--------------------------------------------------------------------------------
